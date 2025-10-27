@@ -348,6 +348,13 @@ main {
 }
 
 /* Dashboard Styles */
+.dashboard {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  min-height: calc(100vh - 64px);
+}
 .connect-prompt {
   text-align: center;
   padding: 80px 20px;
@@ -389,7 +396,7 @@ main {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 24px;
   margin-bottom: 40px;
 }
@@ -399,10 +406,47 @@ main {
   border: 1px solid #e1e8ed;
   border-radius: 12px;
   padding: 24px;
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: all 0.2s ease;
 }
 
-.stat-card h3 {
+.stat-card:hover {
+  border-color: #cfd9de;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card.primary {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  color: white;
+  border: none;
+}
+
+.stat-card.primary .stat-icon {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.stat-card.primary h3,
+.stat-card.primary .stat-value,
+.stat-card.primary .stat-change {
+  color: white;
+}
+
+.stat-icon {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  color: #536471;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-content h3 {
   font-size: 0.875rem;
   font-weight: 500;
   color: #536471;
@@ -415,14 +459,189 @@ main {
   font-size: 2rem;
   font-weight: 700;
   color: #1a1a1a;
-  margin: 0;
+  margin: 0 0 4px 0;
 }
 
-.articles-section h2 {
+.stat-change {
+  font-size: 0.75rem;
+  color: #8b98a5;
+  font-weight: 500;
+}
+
+.stat-change.positive {
+  color: #00ba7c;
+}
+
+.stat-change.negative {
+  color: #f45d22;
+}
+
+/* Performance Section */
+.performance-section {
+  margin-bottom: 40px;
+}
+
+.performance-section h2 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 24px;
   color: #1a1a1a;
+}
+
+.performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.performance-card {
+  background: white;
+  border: 1px solid #e1e8ed;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.performance-card h3 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #536471;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.performance-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.performance-value.positive {
+  color: #00ba7c;
+}
+
+.performance-value.negative {
+  color: #f45d22;
+}
+
+.performance-label {
+  font-size: 0.75rem;
+  color: #8b98a5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Articles Section */
+.articles-section {
+  margin-bottom: 40px;
+}
+
+.articles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.articles-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.write-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #1a1a1a;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.write-new-btn:hover {
+  background-color: #2a2a2a;
+  transform: translateY(-1px);
+}
+
+/* Articles Table */
+.articles-table {
+  background: white;
+  border: 1px solid #e1e8ed;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px 24px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e1e8ed;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #536471;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s ease;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-cell {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #1a1a1a;
+}
+
+.article-info {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.article-title {
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1a1a1a;
+}
+
+.article-meta {
+  font-size: 0.75rem;
+  color: #8b98a5;
+}
+
+.earnings {
+  font-weight: 600;
+  color: #00ba7c;
 }
 
 .articles-list {
@@ -836,6 +1055,69 @@ main {
   
   .payment-overlay {
     padding: 32px 20px;
+  }
+  
+  .dashboard {
+    padding: 0 16px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .stat-card {
+    padding: 20px;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .performance-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .articles-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px;
+  }
+  
+  .table-header {
+    display: none;
+  }
+  
+  .table-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-bottom: 2px solid #e1e8ed;
+    margin-bottom: 16px;
+  }
+  
+  .table-cell {
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+  
+  .table-cell::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #536471;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 }
 
