@@ -6,10 +6,143 @@ import { Clock, User, Lock } from 'lucide-react';
 
 // Mock article data - in real app this would come from API
 const mockArticles = {
+  4: {
+    id: 4,
+    title: "Getting Started with Penny.io: A Writer's Guide",
+    author: "connected_user",
+    authorAddress: "DYNAMIC", // Will be replaced with actual connected address
+    readTime: "4 min read",
+    publishDate: "2024-10-27",
+    price: 0.05,
+    preview: `Welcome to Penny.io! This comprehensive guide will walk you through everything you need to know about creating, publishing, and monetizing your content on our revolutionary micropayment platform.
+
+Whether you're a seasoned writer looking for a new revenue stream or a newcomer to content creation, this guide covers all the essentials to get you started and thriving on Penny.io.`,
+    fullContent: `Welcome to Penny.io! This comprehensive guide will walk you through everything you need to know about creating, publishing, and monetizing your content on our revolutionary micropayment platform.
+
+Whether you're a seasoned writer looking for a new revenue stream or a newcomer to content creation, this guide covers all the essentials to get you started and thriving on Penny.io.
+
+## What Makes Penny.io Different
+
+Penny.io represents a fundamental shift from traditional content monetization models. Instead of relying on subscriptions, ads, or paywalls that block entire articles, we use the x402 protocol to enable true micropayments.
+
+### Key Benefits for Writers
+
+1. **Instant Payouts**: Get paid immediately when readers purchase your content
+2. **You Set the Price**: Complete control over your article pricing ($0.01-$1.00)
+3. **No Platform Fees**: Keep 100% of your earnings
+4. **Global Reach**: Accessible to anyone with a Web3 wallet
+5. **Transparent Analytics**: Real-time insights into your content performance
+
+## Getting Started: Your First Article
+
+Creating your first article on Penny.io is straightforward:
+
+### Step 1: Connect Your Wallet
+- Use MetaMask, Coinbase Wallet, or any Web3-compatible wallet
+- Ensure you're on a supported network (Ethereum, Polygon, etc.)
+- Your wallet address becomes your unique writer identity
+
+### Step 2: Write Your Content
+- Use our markdown editor for rich formatting
+- Include engaging headlines and clear structure
+- Optimize for readability and value delivery
+
+### Step 3: Set Your Price
+- Consider your content's value and target audience
+- Start with lower prices to build readership
+- Test different price points to find your sweet spot
+
+### Step 4: Publish and Promote
+- Share your article link on social media
+- Engage with the Penny.io community
+- Build your reader base organically
+
+## Maximizing Your Earnings
+
+Success on Penny.io comes from understanding your audience and consistently delivering value.
+
+### Content Strategy Tips
+
+**Focus on Quality Over Quantity**: One well-researched, valuable article often outperforms multiple rushed pieces.
+
+**Understand Your Niche**: Develop expertise in specific areas and become known for that content.
+
+**Engage with Readers**: Respond to feedback and build relationships with your audience.
+
+**Optimize Pricing**: Use your dashboard analytics to understand what pricing works best.
+
+### Analytics and Optimization
+
+Your writer dashboard provides comprehensive insights:
+- View counts and conversion rates
+- Earnings tracking and trends
+- Reader engagement metrics
+- Performance comparisons across articles
+
+Use this data to refine your content strategy and pricing approach.
+
+## Best Practices for Success
+
+### Writing Guidelines
+- Clear, engaging headlines
+- Strong opening paragraphs
+- Well-structured content with headers
+- Actionable insights and takeaways
+- Proper grammar and formatting
+
+### Pricing Strategy
+- Research similar content pricing
+- Consider your target audience's willingness to pay
+- Factor in content length and research depth
+- Test and iterate based on performance
+
+### Community Building
+- Consistently publish quality content
+- Engage with other writers
+- Share insights and tips
+- Build your reputation within the ecosystem
+
+## Technical Considerations
+
+### Wallet Security
+- Use hardware wallets for large earnings
+- Keep your seed phrase secure
+- Enable two-factor authentication where possible
+- Regularly monitor your account activity
+
+### Platform Features
+- Bookmark your favorite articles
+- Follow writers you enjoy
+- Use the search functionality to discover content
+- Participate in community discussions
+
+## Troubleshooting Common Issues
+
+### Payment Problems
+- Ensure sufficient network fees for transactions
+- Check wallet connectivity
+- Verify network compatibility
+- Contact support if issues persist
+
+### Content Issues
+- Use supported markdown formatting
+- Check image upload requirements
+- Ensure content meets community guidelines
+- Review for proper formatting before publishing
+
+## The Future of Content Monetization
+
+Penny.io is pioneering the future of how creators get paid for their work. By removing traditional barriers and enabling direct value exchange, we're creating a more equitable content ecosystem.
+
+As you begin your journey on Penny.io, remember that success comes from consistently providing value to your readers. Focus on creating content that genuinely helps, informs, or entertains your audience, and the financial rewards will follow.
+
+Welcome to the future of content creation!`
+  },
   1: {
     id: 1,
     title: "Building Scalable Web3 Applications with x402 Protocol",
     author: "alex_crypto",
+    authorAddress: "0x742d35Cc6634C0532925a3b8D6A9DdC6C7C10f12", // Mock author wallet address
     readTime: "8 min read",
     publishDate: "2024-10-25",
     price: 0.12,
@@ -103,11 +236,19 @@ Remember that the key to success with x402 is balancing monetization with user e
 
 function Article() {
   const { id } = useParams();
-  const { isConnected } = useWallet();
+  const { isConnected, address } = useWallet();
   const [hasPaid, setHasPaid] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const article = mockArticles[Number(id) as keyof typeof mockArticles];
+  
+  // Set dynamic author address for article 4 (connected user's article)
+  if (article && article.id === 4 && article.authorAddress === "DYNAMIC" && address) {
+    article.authorAddress = address;
+  }
+  
+  // Check if current user is the author of this article
+  const isAuthor = address && article && address.toLowerCase() === article.authorAddress.toLowerCase();
 
   if (!article) {
     return (
@@ -159,7 +300,7 @@ function Article() {
               ))}
             </div>
 
-            {!hasPaid && (
+            {!hasPaid && !isAuthor && (
               <div className="payment-gate">
                 <div className="payment-overlay">
                   <Lock size={48} />
@@ -190,11 +331,19 @@ function Article() {
               </div>
             )}
 
-            {hasPaid && (
+            {isAuthor && (
+              <div className="author-notice">
+                <p>✍️ You're viewing your own article - no payment required!</p>
+              </div>
+            )}
+
+            {(hasPaid || isAuthor) && (
               <div className="full-content">
-                <div className="payment-success">
-                  <p>✓ Payment successful! Enjoy the full article.</p>
-                </div>
+                {hasPaid && !isAuthor && (
+                  <div className="payment-success">
+                    <p>✓ Payment successful! Enjoy the full article.</p>
+                  </div>
+                )}
                 {article.fullContent.split('\n\n').map((paragraph, index) => {
                   if (paragraph.startsWith('## ')) {
                     return <h2 key={index}>{paragraph.replace('## ', '')}</h2>;

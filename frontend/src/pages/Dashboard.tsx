@@ -1,9 +1,21 @@
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { TrendingUp, DollarSign, Eye, Users, Calendar, Edit3 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { TrendingUp, DollarSign, Eye, Users, Calendar, Edit3, LayoutDashboard } from 'lucide-react';
 
-// Mock analytics data
-const mockArticles = [
+// Mock analytics data - function to create articles based on connected address
+const createMockArticles = (userAddress: string | undefined) => [
+  {
+    id: 4,
+    title: "Getting Started with Penny.io: A Writer's Guide",
+    publishDate: "2024-10-27",
+    price: 0.05,
+    views: 234,
+    purchases: 23,
+    earnings: 1.15,
+    readTime: "4 min",
+    authorAddress: userAddress || "0x0000000000000000000000000000000000000000"
+  },
   {
     id: 1,
     title: "Building Scalable Web3 Applications with x402 Protocol",
@@ -37,18 +49,19 @@ const mockArticles = [
 ];
 
 const mockStats = {
-  totalEarnings: 53.61,
-  totalArticles: 3,
-  totalViews: 4247,
-  totalPurchases: 448,
+  totalEarnings: 54.76,
+  totalArticles: 4,
+  totalViews: 4481,
+  totalPurchases: 471,
   conversionRate: 10.5,
-  thisMonthEarnings: 24.13,
+  thisMonthEarnings: 25.28,
   lastMonthEarnings: 29.48,
-  avgEarningsPerArticle: 17.87
+  avgEarningsPerArticle: 13.69
 };
 
 function Dashboard() {
   const { isConnected, address, balance } = useWallet();
+  const mockArticles = createMockArticles(address);
 
   if (!isConnected) {
     return (
@@ -68,7 +81,7 @@ function Dashboard() {
     <div className="dashboard">
       <div className="container">
         <div className="dashboard-header">
-          <h1>Writer Dashboard</h1>
+          <h1> <LayoutDashboard size={25}/> Writer Dashboard</h1>
           <div className="wallet-info">
             <p><strong>Address:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}</p>
             <p><strong>Balance:</strong> {balance}</p>
@@ -169,17 +182,18 @@ function Dashboard() {
               <div className="table-cell">Published</div>
               <div className="table-cell">Price</div>
               <div className="table-cell">Views</div>
-              <div className="table-cell">Purchases</div>
+              <div className="table-cell">Readers</div>
               <div className="table-cell">Earnings</div>
               <div className="table-cell">Rate</div>
             </div>
             
             {mockArticles.map((article) => (
-              <div key={article.id} className="table-row">
-                <div className="table-cell article-info">
-                  <div className="article-title">{article.title}</div>
-                  <div className="article-meta">{article.readTime} read</div>
-                </div>
+              <Link key={article.id} to={`/article/${article.id}`} className="table-row-link">
+                <div className="table-row">
+                  <div className="table-cell article-info">
+                    <div className="article-title">{article.title}</div>
+                    <div className="article-meta">{article.readTime} read</div>
+                  </div>
                 <div className="table-cell">
                   {new Date(article.publishDate).toLocaleDateString()}
                 </div>
@@ -195,10 +209,11 @@ function Dashboard() {
                 <div className="table-cell earnings">
                   ${article.earnings.toFixed(2)}
                 </div>
-                <div className="table-cell">
-                  {((article.purchases / article.views) * 100).toFixed(1)}%
+                  <div className="table-cell">
+                    {((article.purchases / article.views) * 100).toFixed(1)}%
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

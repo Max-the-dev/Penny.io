@@ -380,8 +380,23 @@ main {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 32px;
+  margin-top: 40px;
   padding-bottom: 24px;
   border-bottom: 1px solid #e1e8ed;
+}
+
+.dashboard-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.dashboard-header h1 svg {
+  color: #536471;
 }
 
 .wallet-info {
@@ -577,6 +592,11 @@ main {
 }
 
 /* Articles Table */
+.table-row-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
 .articles-table {
   background: white;
   border: 1px solid #e1e8ed;
@@ -878,6 +898,21 @@ main {
 .payment-benefits p {
   color: #536471;
   font-size: 0.875rem;
+  margin: 0;
+}
+
+.author-notice {
+  background-color: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.author-notice p {
+  color: #1565c0;
+  font-weight: 500;
   margin: 0;
 }
 
