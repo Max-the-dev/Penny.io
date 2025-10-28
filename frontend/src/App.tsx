@@ -12,6 +12,7 @@ import HowItWorks from './pages/HowItWorks';
 import Pricing from './pages/Pricing';
 import Resources from './pages/Resources';
 import Help from './pages/Help';
+import Privacy from './pages/Privacy';
 import './App.css'
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/resources" element={<Resources />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/privacy" element={<Privacy />} />
             </Routes>
           </main>
           <Footer />

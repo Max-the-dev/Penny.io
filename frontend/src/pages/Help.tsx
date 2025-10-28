@@ -1,5 +1,5 @@
-import React from 'react';
-import { HelpCircle, BookOpen, Wallet, Users, FileText, Mail } from 'lucide-react';
+
+import { HelpCircle, BookOpen, Users, Mail } from 'lucide-react';
 
 function Help() {
   return (
