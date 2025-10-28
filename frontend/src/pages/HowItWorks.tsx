@@ -71,7 +71,7 @@ function HowItWorks() {
             <h2>For Writers</h2>
           </div>
           <p className="section-description">
-            Monetize your content directly without ads or subscription barriers. 
+            Monetize your content directly without ads or subscription barriers.<br></br> 
             Set your own prices and earn from every reader.
           </p>
           

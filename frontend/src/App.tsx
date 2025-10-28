@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Article from './pages/Article';
 import About from './pages/About';
 import HowItWorks from './pages/HowItWorks';
+import Pricing from './pages/Pricing';
 import './App.css'
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
               <Route path="/article/:id" element={<Article />} />
               <Route path="/about" element={<About />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/pricing" element={<Pricing />} />
             </Routes>
           </main>
           <Footer />

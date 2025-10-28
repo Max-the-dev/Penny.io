@@ -72,7 +72,7 @@ function Home() {
     <div className="home">
       <div className="hero">
         <h1>Micropayments for Quality Content </h1>
-        <p>Pay only for what you read. No subscriptions, no ads. Support creators directly with instant payments.</p>
+        <p>Pay only for what you read. No subscriptions, no ads. <br></br>Support creators directly with instant payments.</p>
       </div>
       
       <div className="typing-cta-section">
