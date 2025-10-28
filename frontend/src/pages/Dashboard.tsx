@@ -376,7 +376,8 @@ function Dashboard() {
                     ${article.earnings.toFixed(2)}
                   </div>
                     <div className="table-cell">
-                      {((article.purchases / article.views) * 100).toFixed(1)}%
+                      {/* Calculate conversion rate. Display 0 if none */}
+                      {article.views > 0 ? ((article.purchases / article.views) * 100).toFixed(1) : '0'}%
                     </div>
                   </div>
                 </Link>
