@@ -48,9 +48,25 @@ function Article() {
 
     fetchArticle();
   }, [id]);
-  
+
   // Check if current user is the author of this article
   const isAuthor = address && article && address.toLowerCase() === article.authorAddress.toLowerCase();
+
+  // Increment view count when article loads (ony once per session)
+  useEffect(() => {
+    if (article && !isAuthor) {
+      // Only increment views for not-authors
+      const incrementViews = async () => {
+        try {
+          await apiService.incrementArticleViews(article.id);
+        } catch (error) {
+          console.error('Failed to incremenet views', error);
+          // Don't show error to users - this is background functionality
+        }
+      };
+      incrementViews();
+    }
+  }, [article, isAuthor]); //Only run when article or isAuthor changes
 
   if (loading) {
     return (

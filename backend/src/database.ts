@@ -1,5 +1,5 @@
 import sqlite3 from 'sqlite3';
-import path from 'path';
+import path, { resolve } from 'path';
 import { Article, Author } from './types';
 
 class Database {
@@ -198,6 +198,24 @@ class Database {
         } else {
           resolve();
         }
+      });
+    });
+  }
+
+  // Increment article views by 1
+  incrementArticleViews(articleId: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const query = 'UPDATE articles SET views = views + 1 WHERE id = ?';
+      
+      this.db.run(query, [articleId], function(err) {
+        if (err) {
+          console.error('Error incrementing article views:', err);
+          reject(err);
+          return;
+        }
+        
+        // this.changes tells us how many rows were affected
+        resolve(this.changes > 0);
       });
     });
   }

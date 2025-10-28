@@ -245,6 +245,44 @@ router.get('/authors/:address', async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/articles/:id/view - Increment article views
+router.put('/articles/:id/view', async (req: Request, res: Response) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    
+    if (isNaN(articleId)) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid article ID'
+      };
+      return res.status(400).json(response);
+    }
+
+    const result = await db.incrementArticleViews(articleId);
+    
+    if (result) {
+      const response: ApiResponse<{ message: string }> = {
+        success: true,
+        data: { message: 'View count incremented' }
+      };
+      res.json(response);
+    } else {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Article not found'
+      };
+      res.status(404).json(response);
+    }
+  } catch (error) {
+    console.error('Error incrementing article views:', error);
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to increment views'
+    };
+    res.status(500).json(response);
+  }
+});
+
 // POST /api/articles/:id/purchase - Record article purchase
 router.post('/articles/:id/purchase', async (req: Request, res: Response) => {
   try {

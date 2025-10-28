@@ -121,6 +121,14 @@ class ApiService {
   async healthCheck(): Promise<ApiResponse<{ message: string; timestamp: string; version: string }>> {
     return this.request<{ message: string; timestamp: string; version: string }>('/health');
   }
+
+  // Increment Article Views 
+  async incrementArticleViews(articleId: number): Promise<ApiResponse<void>> {
+    return this.request<void>(`/articles/${articleId}/view`, {
+      method: 'PUT'
+    });
+  }
+
 }
 
 export const apiService = new ApiService();
