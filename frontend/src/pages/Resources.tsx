@@ -119,7 +119,7 @@ function Resources() {
         <div className="resources-hero">
           <h1>Resources & Documentation</h1>
           <p className="hero-subtitle">
-            Everything you need to get started with Penny.io. <br />
+            Everything you need to get started with Penny.io <br />
           </p>
         </div>
 

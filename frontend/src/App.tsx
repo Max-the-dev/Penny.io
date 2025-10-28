@@ -11,6 +11,7 @@ import About from './pages/About';
 import HowItWorks from './pages/HowItWorks';
 import Pricing from './pages/Pricing';
 import Resources from './pages/Resources';
+import Help from './pages/Help';
 import './App.css'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/resources" element={<Resources />} />
+              <Route path="/help" element={<Help />} />
             </Routes>
           </main>
           <Footer />
