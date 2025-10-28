@@ -2223,3 +2223,383 @@ main {
     font-size: 0.875rem;
   }
 }
+
+/* About Page Styles */
+.about-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  min-height: calc(100vh - 64px);
+}
+
+.about-hero {
+  text-align: center;
+  padding: 80px 0 60px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.about-hero h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.about-section {
+  margin-bottom: 60px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.section-header svg {
+  color: #1a1a1a;
+}
+
+.section-header h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.mission-content p,
+.vision-content > p,
+.technology-content p {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: #374151;
+  margin-bottom: 20px;
+}
+
+.vision-points {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.vision-point {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.vision-point svg {
+  color: #1a1a1a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.vision-point h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.vision-point p {
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.value-card {
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.value-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.value-card h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.value-card p {
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.team-content {
+  text-align: center;
+  .founder-section {
+    margin: 32px 0;
+    padding: 24px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .founder-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 16px 0;
+  }
+
+  .founder-info p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #374151;
+    margin-bottom: 16px;
+  }
+
+  .x-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #1a1a1a;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+
+  .x-link:hover {
+    background: #2a2a2a;
+    transform: translateY(-1px);
+  }
+}
+
+.team-content p {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: #374151;
+  margin-bottom: 32px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.team-stats {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat h3 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 4px 0;
+}
+
+.stat p {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.technology-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 32px 0 12px 0;
+}
+
+.technology-content h3:first-child {
+  margin-top: 0;
+}
+
+.technology-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+
+.technology-content li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.technology-content li:last-child {
+  border-bottom: none;
+}
+
+.technology-content strong {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.about-cta {
+  text-align: center;
+  padding: 48px 32px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  color: white;
+  margin: 40px 0 80px 0;
+}
+
+.about-cta h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+}
+
+.about-cta p {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  margin: 0 0 32px 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0.9;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.cta-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.cta-button.primary {
+  background: white;
+  color: #1a1a1a;
+}
+
+.cta-button.primary:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+}
+
+.cta-button.secondary {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cta-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+/* About Page Responsive */
+@media (max-width: 768px) {
+  .about-hero h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.125rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .vision-points {
+    grid-template-columns: 1fr;
+  }
+  
+  .values-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .team-stats {
+    gap: 32px;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .team-content .founder-section {
+    margin: 24px 0;
+    padding: 20px;
+  }
+  
+  .team-content .founder-info p {
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+  }
+  
+  .team-content .x-link {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  
+  .about-cta {
+    padding: 32px 20px;
+    margin: 32px 0 60px 0;
+  }
+  
+  .about-cta h2 {
+    font-size: 1.5rem;
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .cta-button {
+    width: 180px;
+    justify-content: center;
+  }
+}

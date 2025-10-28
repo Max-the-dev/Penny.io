@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Write from './pages/Write';
 import Dashboard from './pages/Dashboard';
 import Article from './pages/Article';
+import About from './pages/About';
 import './App.css'
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
               <Route path="/write" element={<Write />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/article/:id" element={<Article />} />
+              <Route path="/about" element={<About />} />
             </Routes>
           </main>
           <Footer />
