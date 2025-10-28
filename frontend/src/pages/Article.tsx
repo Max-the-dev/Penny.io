@@ -95,14 +95,29 @@ function Article() {
 
   const handlePayment = async () => {
     setIsProcessingPayment(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      setHasPaid(true);
+    
+    try {
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Record the purchase in the backend
+      const purchaseResponse = await apiService.recordPurchase(article.id);
+      
+      if (purchaseResponse.success) {
+        setHasPaid(true);
+        setShowPaymentToast(true);
+        // Hide toast after 3 seconds
+        setTimeout(() => setShowPaymentToast(false), 3000);
+      } else {
+        console.error('Failed to record purchase:', purchaseResponse.error);
+        // Could add error handling here
+      }
+    } catch (error) {
+      console.error('Payment processing failed:', error);
+      // Could add error handling here
+    } finally {
       setIsProcessingPayment(false);
-      setShowPaymentToast(true);
-      // Hide toast after 3 seconds
-      setTimeout(() => setShowPaymentToast(false), 3000);
-    }, 2000);
+    }
   };
 
   const handleTip = async () => {
