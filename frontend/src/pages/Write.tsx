@@ -1,16 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Bold, Italic, Code, List, Hash, Eye, EyeOff, Save, Send, Book, Feather } from 'lucide-react';
+import { Save, Send } from 'lucide-react';
 import { getCurrentDateString } from '../utils/dateUtils';
 import { apiService } from '../services/api';
+import { Editor } from '@tinymce/tinymce-react';
 
 function Write() {
   const { isConnected, address } = useWallet();
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [price, setPrice] = useState<string>('0.05');
-  const [showPreview, setShowPreview] = useState<boolean>(true);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>('');
@@ -32,6 +32,7 @@ function Write() {
       setHasTyped(true);
     }
   }, [displayText, hasTyped, fullText]);
+
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,35 +79,6 @@ function Write() {
     setTimeout(() => setIsDraft(false), 2000);
   };
 
-  // Format text with basic markdown support for preview
-  const formatText = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/^- (.*$)/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-      .split('\n\n')
-      .map(p => p.startsWith('<h') || p.startsWith('<ul') ? p : `<p>${p}</p>`)
-      .join('');
-  };
-
-  const insertMarkdown = (before: string, after: string = '') => {
-    const textarea = document.getElementById('content') as HTMLTextAreaElement;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.substring(start, end);
-    const newContent = content.substring(0, start) + before + selectedText + after + content.substring(end);
-    setContent(newContent);
-    
-    // Set cursor position after insertion
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length);
-    }, 0);
-  };
 
   const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
   const charCount = content.length;
@@ -128,66 +100,60 @@ function Write() {
   return (
     <div className="write">
       <div className="write-container">
-        {/* Header */}
-        <div className="write-header">
-          <div className="write-header-main">
-            <h1 className="typing-title">
-              <div className="typing-icon">
-                <Feather size={28} />
-              </div>
-              <span className="typing-text">
-                {displayText}
-                <span className="cursor">|</span>
-              </span>
-            </h1>
-          </div>
-          <div className="write-header-right">
-            <p className="write-subtitle">*Advanced markdown features supported. <br></br>*Image file size limited to 'X mb'</p>
-            <div className="write-header-actions">
-              <button 
-                type="button" 
-                onClick={() => setShowPreview(!showPreview)}
-                className="preview-toggle"
-              >
-                {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
-                {showPreview ? 'Hide Preview' : 'Show Preview'}
-              </button>
-              <button 
-                type="button" 
-                onClick={saveDraft}
-                className="save-draft-btn"
-                disabled={isDraft}
-              >
-                <Save size={18} />
-                {isDraft ? 'Saved!' : 'Save Draft'}
-              </button>
-            </div>
-          </div>
+        {/* Floating Action Buttons */}
+        <div className="floating-actions">
+          <button 
+            type="button" 
+            onClick={saveDraft}
+            className="floating-btn save-floating"
+            disabled={isDraft}
+            title={isDraft ? 'Saved!' : 'Save Draft'}
+          >
+            <Save size={18} />
+          </button>
+          <button 
+            type="submit" 
+            form="write-form"
+            className="floating-btn publish-floating"
+            disabled={isSubmitting}
+            title={isSubmitting ? 'Publishing...' : 'Publish Article'}
+          >
+            <Send size={18} />
+          </button>
         </div>
 
         {/* Main Content */}
         <div className="write-layout">
-          {/* Editor Panel */}
-          <div className="write-editor">
-            <form onSubmit={handleSubmit} className="write-form">
-              {/* Title Input */}
-              <div className="form-group">
-                <input
-                  type="text"
+          <form id="write-form" onSubmit={handleSubmit} className="write-form">
+            {/* Article Details */}
+            <div className="article-inputs">
+              <div className="title-section">
+                <label htmlFor="title" className="input-label">Article Title</label>
+                <textarea
                   id="title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Article title..."
-                  className="title-input"
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    // Auto-resize height
+                    e.target.style.height = 'auto';
+                    e.target.style.height = e.target.scrollHeight + 'px';
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.stopPropagation();
+                    }
+                  }}
+                  placeholder="Enter your article title..."
+                  className="title-input-auto"
+                  rows={1}
+                  style={{ resize: 'none', overflow: 'hidden' }}
                   required
                 />
               </div>
-
-              {/* Price Input */}
-              <div className="form-group price-group">
-                <label htmlFor="price">Article Price</label>
-                <div className="price-input-wrapper">
-                  <span className="price-symbol">$</span>
+              <div className="price-section">
+                <label htmlFor="price" className="input-label">Price</label>
+                <div className="price-input-simple">
+                  <span>$</span>
                   <input
                     type="number"
                     id="price"
@@ -196,122 +162,81 @@ function Write() {
                     min="0.01"
                     max="1.00"
                     step="0.01"
-                    className="price-input"
+                    placeholder="0.05"
                     required
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Markdown Toolbar */}
-              <div className="markdown-toolbar">
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('**', '**')}
-                  className="toolbar-btn"
-                  title="Bold"
-                >
-                  <Bold size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('*', '*')}
-                  className="toolbar-btn"
-                  title="Italic"
-                >
-                  <Italic size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('`', '`')}
-                  className="toolbar-btn"
-                  title="Code"
-                >
-                  <Code size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('## ', '')}
-                  className="toolbar-btn"
-                  title="Heading"
-                >
-                  <Hash size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('- ', '')}
-                  className="toolbar-btn"
-                  title="List"
-                >
-                  <List size={16} />
-                </button>
-              </div>
-
-              {/* Content Textarea */}
-              <div className="form-group">
-                <div className="content-header">
-                  <label htmlFor="content">Article Content</label>
-                  <div className="write-stats">
-                    <span>{wordCount} words</span>
-                    <span>•</span>
-                    <span>{charCount} characters</span>
-                  </div>
+            {/* Content Editor */}
+            <div className="form-group">
+              <div className="content-header">
+                <label htmlFor="content" className="input-label">Article Body</label>
+                <div className="write-stats">
+                  <span>{wordCount} words</span>
+                  <span>•</span>
+                  <span>{charCount} characters</span>
                 </div>
-                <textarea
-                  id="content"
+              </div>
+              <div className="tinymce-wrapper">
+                <Editor
+                  apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Start writing your article..."
-                  className="content-textarea"
-                  required
+                  onEditorChange={(content) => setContent(content)}
+                  init={{
+                    height: 700,
+                    menubar: false,
+                    resize: false,
+                    statusbar: false,
+                    plugins: [
+                      'link', 'lists', 'code', 'table', 'media', 'codesample', 'autolink', 'powerpaste', 'wordcount'
+                    ],
+                    toolbar: 'undo redo | blocks | bold italic underline | link media table | code codesample | bullist numlist outdent indent | removeformat',
+                    content_style: `
+                      body { 
+                        font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+                        font-size: 16px; 
+                        line-height: 1.7; 
+                        max-width: none; 
+                        margin: 0;
+                        padding: 20px;
+                        color: #1a1a1a;
+                      }
+                      h1, h2, h3 { color: #1a1a1a; margin-top: 2em; margin-bottom: 0.5em; }
+                      h1 { font-size: 2em; font-weight: 700; }
+                      h2 { font-size: 1.5em; font-weight: 600; }
+                      h3 { font-size: 1.25em; font-weight: 600; }
+                      p { margin-bottom: 1em; }
+                      code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+                      pre { background: #f8f9fa; padding: 1em; border-radius: 8px; overflow-x: auto; }
+                      blockquote { border-left: 4px solid #e5e7eb; margin: 1.5em 0; padding-left: 1em; color: #6b7280; }
+                    `,
+                    skin: 'oxide',
+                    branding: false,
+                    block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Quote=blockquote',
+                    paste_as_text: false,
+                    smart_paste: true
+                  }}
                 />
               </div>
-
-              {/* Error Message */}
-              {submitError && (
-                <div className="submit-error">
-                  {submitError}
-                </div>
-              )}
-
-              {/* Success Message */}
-              {submitSuccess && (
-                <div className="submit-success">
-                  ✅ Article published successfully!
-                </div>
-              )}
-
-              {/* Publish Button */}
-              <button 
-                type="submit" 
-                className="publish-btn"
-                disabled={isSubmitting || !title || !content}
-              >
-                <Send size={18} />
-                {isSubmitting ? 'Publishing...' : 'Publish Article'}
-              </button>
-            </form>
-          </div>
-
-          {/* Preview Panel */}
-          {showPreview && (
-            <div className="write-preview">
-              <div className="preview-header">
-                <h3>Preview</h3>
-              </div>
-              <div className="preview-content">
-                {title && <h1 className="preview-title">{title}</h1>}
-                {content && (
-                  <div 
-                    className="preview-body"
-                    dangerouslySetInnerHTML={{ __html: formatText(content) }}
-                  />
-                )}
-                {!title && !content && (
-                  <p className="preview-empty">Start writing to see a preview...</p>
-                )}
-              </div>
             </div>
-          )}
+
+            {/* Error Message */}
+            {submitError && (
+              <div className="submit-error">
+                {submitError}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {submitSuccess && (
+              <div className="submit-success">
+                ✅ Article published successfully!
+              </div>
+            )}
+
+          </form>
         </div>
       </div>
     </div>
