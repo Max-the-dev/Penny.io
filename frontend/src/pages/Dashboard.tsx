@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Link } from 'react-router-dom';
-import { DollarSign, Eye, Users, Edit3, LayoutDashboard, Search, Filter, X, Book } from 'lucide-react';
+import { DollarSign, Eye, Users, Edit3, LayoutDashboard, Search, Filter, X, Book, Trash2, Edit } from 'lucide-react';
 import { getDateDaysAgo, isDateWithinRange, getRelativeTimeString } from '../utils/dateUtils';
 import { apiService, Article } from '../services/api';
 
@@ -68,6 +68,8 @@ function Dashboard() {
   // Articles state
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; article: Article | null }>({ show: false, article: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string>('');
   
   // Search and filter state
@@ -111,6 +113,29 @@ function Dashboard() {
       console.error('Error fetching articles:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete article handler
+  const handleDeleteArticle = async (article: Article) => {
+    if (!address) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await apiService.deleteArticle(article.id, address);
+      if (response.success) {
+        // Remove article from local state
+        setArticles(prev => prev.filter(a => a.id !== article.id));
+        setDeleteConfirm({ show: false, article: null });
+        // Show success message or notification here if needed
+      } else {
+        setError(response.error || 'Failed to delete article');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred while deleting');
+      console.error('Error deleting article:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -233,7 +258,10 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Articles List */}
+      </div>
+
+      {/* Articles List - Wide Container */}
+      <div className="articles-wide-container">
         <div className="articles-section">
           <div className="articles-header">
             <h2><Book size={20} />Your Articles</h2>
@@ -343,6 +371,7 @@ function Dashboard() {
               <div className="table-cell">Readers</div>
               <div className="table-cell">Earnings</div>
               <div className="table-cell">Rate</div>
+              <div className="table-cell">Actions</div>
             </div>
             
             {loading ? (
@@ -351,12 +380,13 @@ function Dashboard() {
               </div>
             ) : filteredAndSortedArticles.length > 0 ? (
               filteredAndSortedArticles.map((article) => (
-                <Link key={article.id} to={`/article/${article.id}`} className="table-row-link">
-                  <div className="table-row">
-                    <div className="table-cell article-info">
+                <div key={article.id} className="table-row">
+                  <div className="table-cell article-info">
+                    <Link to={`/article/${article.id}`} className="article-title-link">
                       <div className="article-title">{article.title}</div>
-                      <div className="article-meta">{article.readTime} read</div>
-                    </div>
+                    </Link>
+                    <div className="article-meta">{article.readTime} read</div>
+                  </div>
                   <div className="table-cell">
                     <div className="date-info">
                       <div className="date-primary">{new Date(article.publishDate).toLocaleDateString()}</div>
@@ -375,12 +405,23 @@ function Dashboard() {
                   <div className="table-cell earnings">
                     ${article.earnings.toFixed(2)}
                   </div>
-                    <div className="table-cell">
-                      {/* Calculate conversion rate. Display 0 if none */}
-                      {article.views > 0 ? ((article.purchases / article.views) * 100).toFixed(1) : '0'}%
-                    </div>
+                  <div className="table-cell">
+                    {/* Calculate conversion rate. Display 0 if none */}
+                    {article.views > 0 ? ((article.purchases / article.views) * 100).toFixed(1) : '0'}%
                   </div>
-                </Link>
+                  <div className="table-cell actions">
+                    <Link to={`/edit/${article.id}`} className="action-btn edit-btn" title="Edit article">
+                      <Edit size={12} />
+                    </Link>
+                    <button 
+                      onClick={() => setDeleteConfirm({ show: true, article })}
+                      className="action-btn delete-btn" 
+                      title="Delete article"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
               ))
             ) : (
               <div className="no-results">
@@ -402,6 +443,34 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+        {deleteConfirm.show && deleteConfirm.article && (
+          <div className="modal-overlay">
+            <div className="confirm-modal">
+              <h3>Delete Article</h3>
+              <p>Are you sure you want to delete "<strong>{deleteConfirm.article.title}</strong>"?</p>
+              <p className="warning-text">This action cannot be undone.</p>
+              
+              <div className="modal-actions">
+                <button 
+                  onClick={() => setDeleteConfirm({ show: false, article: null })}
+                  className="secondary-btn"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleDeleteArticle(deleteConfirm.article!)}
+                  className="delete-confirm-btn"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Article'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

@@ -125,6 +125,20 @@ class ApiService {
     });
   }
 
+  async updateArticle(id: number, article: CreateArticleRequest): Promise<ApiResponse<Article>> {
+    return this.request<Article>(`/articles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(article),
+    });
+  }
+
+  async deleteArticle(id: number, authorAddress: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>(`/articles/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ authorAddress }),
+    });
+  }
+
   async recordPurchase(articleId: number): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>(`/articles/${articleId}/purchase`, {
       method: 'POST',

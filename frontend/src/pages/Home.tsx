@@ -15,6 +15,12 @@ function Home() {
     "Empower AI agents with knowledge"
   ];
 
+  // Utility function to strip HTML tags from preview text
+  const stripHtmlTags = (html: string) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || "";
+  };
+
   const [currentBenefit, setCurrentBenefit] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
@@ -107,7 +113,7 @@ function Home() {
               <Link key={article.id} to={`/article/${article.id}`} className="article-card-link">
                 <div className="article-card">
                   <h3>{article.title}</h3>
-                  <p>{article.preview}</p>
+                  <p>{stripHtmlTags(article.preview)}</p>
                   <div className="article-meta">
                     <span className="price">${article.price.toFixed(2)}</span>
                     <div className="author-info">

@@ -204,7 +204,7 @@ function Article() {
 
             {isAuthor && (
               <div className="author-notice">
-                <p>✍️ You're viewing your own article - no payment required!</p>
+                <p>✍️ You're viewing your own article!</p>
               </div>
             )}
 
