@@ -4,7 +4,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Link } from 'react-router-dom';
 import { DollarSign, Eye, Users, Edit3, LayoutDashboard, Search, Filter, X, Book, Trash2, Edit } from 'lucide-react';
 import { isDateWithinRange, getRelativeTimeString } from '../utils/dateUtils';
-import { apiService, Article } from '../services/api';
+import { apiService, Article, Author } from '../services/api';
 
 
 function Dashboard() {
@@ -12,6 +12,7 @@ function Dashboard() {
   
   // Articles state
   const [articles, setArticles] = useState<Article[]>([]);
+  const [author, setAuthor] = useState<Author | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; article: Article | null }>({ show: false, article: null });
   const [isDeleting, setIsDeleting] = useState(false);
@@ -24,12 +25,14 @@ function Dashboard() {
   const [sortOrder, setSortOrder] = useState('desc'); // asc, desc
   const [dateFilter, setDateFilter] = useState('all'); // all, week, month, quarter
 
-  // Fetch articles on component mount and when address changes
+  // Fetch articles and author data on component mount and when address changes
   useEffect(() => {
     if (isConnected && address) {
       fetchArticles();
+      fetchAuthor();
     } else {
       setArticles([]);
+      setAuthor(null);
       setLoading(false);
     }
   }, [isConnected, address]);
@@ -61,6 +64,19 @@ function Dashboard() {
     }
   };
 
+  const fetchAuthor = async () => {
+    if (!address) return;
+    
+    try {
+      const response = await apiService.getAuthor(address);
+      if (response.success && response.data) {
+        setAuthor(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching author:', err);
+    }
+  };
+
   // Delete article handler
   const handleDeleteArticle = async (article: Article) => {
     if (!address) return;
@@ -72,6 +88,8 @@ function Dashboard() {
         // Remove article from local state
         setArticles(prev => prev.filter(a => a.id !== article.id));
         setDeleteConfirm({ show: false, article: null });
+        // Refresh author data to ensure lifetime totals are current
+        fetchAuthor();
         // Show success message or notification here if needed
       } else {
         setError(response.error || 'Failed to delete article');
@@ -103,14 +121,14 @@ function Dashboard() {
     return true;
   });
 
-  // Calculate stats from real articles
+  // Calculate stats from author data (lifetime totals) and current articles (for average)
   const stats = {
-    totalEarnings: filteredAndSortedArticles.reduce((sum, article) => sum + article.earnings, 0),
-    totalArticles: filteredAndSortedArticles.length,
-    totalViews: filteredAndSortedArticles.reduce((sum, article) => sum + article.views, 0),
-    totalPurchases: filteredAndSortedArticles.reduce((sum, article) => sum + article.purchases, 0),
-    avgEarningsPerArticle: filteredAndSortedArticles.length > 0 
-      ? filteredAndSortedArticles.reduce((sum, article) => sum + article.earnings, 0) / filteredAndSortedArticles.length 
+    totalEarnings: author?.totalEarnings || 0,
+    totalArticles: author?.totalArticles || 0,
+    totalViews: author?.totalViews || 0,
+    totalPurchases: author?.totalPurchases || 0,
+    avgEarningsPerArticle: (author?.totalArticles || 0) > 0 
+      ? (author?.totalEarnings || 0) / (author?.totalArticles || 0)
       : 0
   };
 
@@ -353,14 +371,14 @@ function Dashboard() {
                   </div>
                   <div className="table-cell actions">
                     <Link to={`/edit/${article.id}`} className="action-btn edit-btn" title="Edit article">
-                      <Edit size={10} />
+                      <Edit size={12} />
                     </Link>
                     <button 
                       onClick={() => setDeleteConfirm({ show: true, article })}
                       className="action-btn delete-btn" 
                       title="Delete article"
                     >
-                      <Trash2 size={10} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>

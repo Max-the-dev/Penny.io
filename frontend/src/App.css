@@ -950,7 +950,7 @@ main {
 
 .table-header {
   display: grid;
-  grid-template-columns: 3fr 1fr 1fr 1fr 1fr 1fr 1fr 80px;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 1fr 1fr 80px;
   gap: 12px;
   padding: 16px 24px;
   background-color: #f8f9fa;
@@ -964,7 +964,7 @@ main {
 
 .table-row {
   display: grid;
-  grid-template-columns: 3fr 1fr 1fr 1fr 1fr 1fr 1fr 80px;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr 1fr 1fr 80px;
   gap: 12px;
   padding: 20px 24px;
   border-bottom: 1px solid #f1f3f4;
@@ -5684,12 +5684,12 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 32px;
   border: 1px solid #e1e8ed;
-  border-radius: 3px;
+  border-radius: 6px;
   background: #fff;
-  color: #536471;
+  color: #64748b;
   text-decoration: none;
   transition: all 0.2s ease;
   cursor: pointer;
@@ -5697,20 +5697,21 @@ main {
 }
 
 .table-cell.actions .action-btn:hover {
-  background: #f7f9fa;
-  color: #1d9bf0;
-  border-color: #1d9bf0;
+  background: #f8fafc;
+  transform: translateY(-1px);
+  border-color: #1a1a1a;
 }
 
 .table-cell.actions .edit-btn:hover {
-  color: #1d9bf0;
-  border-color: #1d9bf0;
+  color: #1a1a1a;
+  border-color: #1a1a1a;
+  background: #f8fafc;
 }
 
 .table-cell.actions .delete-btn:hover {
-  color: #f4212e;
-  border-color: #f4212e;
-  background: #fef1f2;
+  color: #dc2626;
+  border-color: #dc2626;
+  background: #fef2f2;
 }
 
 .article-title-link {
@@ -5829,8 +5830,8 @@ main {
   }
   
   .table-cell.actions .action-btn {
-    width: 28px;
-    height: 28px;
+    width: 25px;
+    height: 36px;
   }
 
   .articles-wide-container {
