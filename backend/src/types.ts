@@ -14,6 +14,7 @@ export interface Article {
   purchases: number;
   earnings: number;
   readTime: string;
+  categories: string[];
 }
 
 export interface Author {
@@ -31,6 +32,7 @@ export interface CreateArticleRequest {
   content: string;
   price: number;
   authorAddress: string;
+  categories: string[];
 }
 
 export interface ApiResponse<T> {
@@ -40,6 +42,24 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+export interface Draft {
+  id: number;
+  title: string;
+  content: string;
+  price: number;
+  authorAddress: string;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+}
+
+export interface CreateDraftRequest {
+  title: string;
+  content: string;
+  price: number;
+  authorAddress: string;
+}
+
 export interface GetArticlesQuery {
   authorAddress?: string;
   limit?: number;
@@ -47,4 +67,5 @@ export interface GetArticlesQuery {
   sortBy?: 'date' | 'title' | 'price' | 'earnings' | 'views';
   sortOrder?: 'asc' | 'desc';
   search?: string;
+  categories?: string[];
 }

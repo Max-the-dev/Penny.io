@@ -1,0 +1,62 @@
+Coinbase Wallet Localhost Configuration
+
+  Option 1: Quick Fix (No Developer Account Needed)
+
+  For development/testing, you can bypass this by:
+
+  1. Use MetaMask instead - it doesn't have this restriction
+  2. Use WalletConnect - Coinbase Wallet supports WalletConnect protocol
+  3. Test on a deployed domain - deploy to Vercel/Netlify for testing
+
+  Option 2: Proper Setup (Recommended for Production)
+
+  1. Create Coinbase Developer Account: https://developers.coinbase.com/
+  2. Register your app in the Coinbase Developer Portal
+  3. Add localhost domains to allowed origins:
+    - http://localhost:3000
+    - http://127.0.0.1:3000
+    - http://localhost:3001 (if needed for backend)
+  4. Get your App ID and add it to the wagmi config
+
+  Option 3: Update wagmi.ts with App ID (when you have it)
+
+  export const config = getDefaultConfig({
+    appName: 'Penny.io',
+    projectId: 'YOUR_WALLETCONNECT_PROJECT_ID',
+    chains: [mainnet, polygon, optimism, arbitrum, base, baseSepolia],
+    // Add this when you get it from Coinbase Developer Portal
+    coinbaseWalletOptions: {
+      appName: 'Penny.io',
+      appLogoUrl: 'https://your-domain.com/logo.png', // Optional
+    },
+    ssr: false,
+  });
+
+
+
+
+  // UX Expansion 
+
+  ** EXPLORE PAGE / FUNCTIONALITY **
+
+  2. Explore Page (Public Discovery)
+
+  - /explore route with article grid
+  - Categories/tags system
+  - Filter by: price, date, popularity, author
+  - Sort by: newest, most viewed, highest rated
+  - Pagination for large article lists
+
+  3. Article Likes System
+
+  - Heart icon on article pages and cards
+  - Like count display
+  - Backend database integration
+  - Real-time like updates
+
+  4. Enhanced Article Discovery
+
+  - "Popular Articles" section on home page
+  - "Recently Published" feed
+  - "Trending" based on views/likes
+  - Author highlighting

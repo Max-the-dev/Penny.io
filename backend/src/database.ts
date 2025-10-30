@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3';
 import path, { resolve } from 'path';
-import { Article, Author } from './types';
+import { Article, Author, Draft } from './types';
 
 class Database {
   private db: sqlite3.Database;
@@ -47,11 +47,49 @@ class Database {
         purchases INTEGER DEFAULT 0,
         earnings REAL DEFAULT 0,
         readTime TEXT NOT NULL,
+        categories TEXT DEFAULT '[]',
+        FOREIGN KEY (authorAddress) REFERENCES authors (address)
+      )
+    `);
+
+    // Create drafts table
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS drafts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        price REAL NOT NULL,
+        authorAddress TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        expiresAt TEXT NOT NULL,
         FOREIGN KEY (authorAddress) REFERENCES authors (address)
       )
     `);
 
     console.log('Database tables initialized');
+    this.migrateTables();
+  }
+
+  private migrateTables(): void {
+    // Add categories column to existing articles table if it doesn't exist
+    this.db.run(`
+      ALTER TABLE articles ADD COLUMN categories TEXT DEFAULT '[]'
+    `, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding categories column:', err);
+      } else if (!err) {
+        console.log('Added categories column to articles table');
+      }
+    });
+  }
+
+  // Helper method to parse article from database row
+  private parseArticleFromRow(row: any): Article {
+    return {
+      ...row,
+      categories: row.categories ? JSON.parse(row.categories) : []
+    };
   }
 
   // Article methods
@@ -69,13 +107,16 @@ class Database {
         views,
         purchases,
         earnings,
-        readTime
+        readTime,
+        categories
       } = article;
 
+      const categoriesJson = JSON.stringify(categories || []);
+
       this.db.run(
-        `INSERT INTO articles (title, content, preview, price, authorAddress, publishDate, createdAt, updatedAt, views, purchases, earnings, readTime)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [title, content, preview, price, authorAddress, publishDate, createdAt, updatedAt, views, purchases, earnings, readTime],
+        `INSERT INTO articles (title, content, preview, price, authorAddress, publishDate, createdAt, updatedAt, views, purchases, earnings, readTime, categories)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [title, content, preview, price, authorAddress, publishDate, createdAt, updatedAt, views, purchases, earnings, readTime, categoriesJson],
         function(err) {
           if (err) {
             reject(err);
@@ -96,7 +137,8 @@ class Database {
           if (err) {
             reject(err);
           } else {
-            resolve(rows as Article[]);
+            const articles = rows.map(row => this.parseArticleFromRow(row));
+            resolve(articles);
           }
         }
       );
@@ -112,7 +154,7 @@ class Database {
           if (err) {
             reject(err);
           } else {
-            resolve((row as Article) || null);
+            resolve(row ? this.parseArticleFromRow(row) : null);
           }
         }
       );
@@ -127,7 +169,8 @@ class Database {
           if (err) {
             reject(err);
           } else {
-            resolve(rows as Article[]);
+            const articles = rows.map(row => this.parseArticleFromRow(row));
+            resolve(articles);
           }
         }
       );
@@ -217,6 +260,233 @@ class Database {
         // this.changes tells us how many rows were affected
         resolve(this.changes > 0);
       });
+    });
+  }
+
+  // Draft methods
+  createDraft(draft: Omit<Draft, 'id'>): Promise<Draft> {
+    return new Promise((resolve, reject) => {
+      const { title, content, price, authorAddress, createdAt, updatedAt, expiresAt } = draft;
+
+      // Always create new draft
+      this.db.run(
+        `INSERT INTO drafts (title, content, price, authorAddress, createdAt, updatedAt, expiresAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [title, content, price, authorAddress, createdAt, updatedAt, expiresAt],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({ id: this.lastID, ...draft } as Draft);
+          }
+        }
+      );
+    });
+  }
+
+  updateDraft(draftId: number, draft: Omit<Draft, 'id'>): Promise<Draft> {
+    return new Promise((resolve, reject) => {
+      const { title, content, price, authorAddress, updatedAt, expiresAt } = draft;
+
+      this.db.run(
+        `UPDATE drafts SET title = ?, content = ?, price = ?, updatedAt = ?, expiresAt = ? WHERE id = ? AND authorAddress = ?`,
+        [title, content, price, updatedAt, expiresAt, draftId, authorAddress],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else if (this.changes === 0) {
+            reject(new Error('Draft not found or unauthorized'));
+          } else {
+            resolve({ id: draftId, ...draft } as Draft);
+          }
+        }
+      );
+    });
+  }
+
+  createOrUpdateRecentDraft(draft: Omit<Draft, 'id'>, isAutoSave: boolean = false): Promise<Draft> {
+    return new Promise((resolve, reject) => {
+      const { title, content, price, authorAddress, createdAt, updatedAt, expiresAt } = draft;
+
+      if (!isAutoSave) {
+        // Manual save: always create new draft
+        return this.createDraft(draft).then(resolve).catch(reject);
+      }
+
+      // Auto-save: check for recent draft (within 1 hour)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      
+      this.db.get(
+        'SELECT id FROM drafts WHERE authorAddress = ? AND updatedAt > ? ORDER BY updatedAt DESC LIMIT 1',
+        [authorAddress, oneHourAgo],
+        (err, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          if (row) {
+            // Update recent draft
+            this.db.run(
+              `UPDATE drafts SET title = ?, content = ?, price = ?, updatedAt = ?, expiresAt = ? WHERE id = ?`,
+              [title, content, price, updatedAt, expiresAt, row.id],
+              function(err) {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve({ id: row.id, ...draft } as Draft);
+                }
+              }
+            );
+          } else {
+            // Create new draft
+            this.createDraft(draft).then(resolve).catch(reject);
+          }
+        }
+      );
+    });
+  }
+
+  getDraftsByAuthor(authorAddress: string): Promise<Draft[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT * FROM drafts WHERE authorAddress = ? AND expiresAt > datetime("now") ORDER BY updatedAt DESC',
+        [authorAddress],
+        (err, rows) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(rows as Draft[]);
+          }
+        }
+      );
+    });
+  }
+
+  deleteDraft(draftId: number, authorAddress: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM drafts WHERE id = ? AND authorAddress = ?',
+        [draftId, authorAddress],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.changes > 0);
+          }
+        }
+      );
+    });
+  }
+
+  cleanupExpiredDrafts(): Promise<number> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM drafts WHERE expiresAt <= datetime("now")',
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.changes);
+          }
+        }
+      );
+    });
+  }
+
+  // Update article
+  updateArticle(id: number, updates: { title?: string; content?: string; preview?: string; price?: number; readTime?: string; updatedAt?: string; categories?: string[] }): Promise<Article> {
+    return new Promise((resolve, reject) => {
+      const fields: string[] = [];
+      const values: any[] = [];
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          if (key === 'categories') {
+            fields.push(`${key} = ?`);
+            values.push(JSON.stringify(value));
+          } else {
+            fields.push(`${key} = ?`);
+            values.push(value);
+          }
+        }
+      });
+
+      if (fields.length === 0) {
+        reject(new Error('No fields to update'));
+        return;
+      }
+
+      values.push(id);
+      const query = `UPDATE articles SET ${fields.join(', ')} WHERE id = ?`;
+
+      this.db.run(query, values, function(err) {
+        if (err) {
+          reject(err);
+        } else if (this.changes === 0) {
+          reject(new Error('Article not found'));
+        } else {
+          // Fetch and return updated article - the promise chain will handle this
+          resolve(undefined);
+        }
+      });
+    }).then(() => this.getArticleById(id)) as Promise<Article>;
+  }
+
+  // Delete article
+  deleteArticle(id: number): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM articles WHERE id = ?',
+        [id],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.changes > 0);
+          }
+        }
+      );
+    });
+  }
+
+  // Recalculate author totals from existing articles (for data correction)
+  recalculateAuthorTotals(authorAddress: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Get current totals from articles
+      this.db.get(
+        `SELECT 
+          COUNT(*) as articleCount,
+          COALESCE(SUM(views), 0) as totalViews,
+          COALESCE(SUM(purchases), 0) as totalPurchases,
+          COALESCE(SUM(earnings), 0) as totalEarnings
+         FROM articles WHERE authorAddress = ?`,
+        [authorAddress],
+        async (err, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          try {
+            // Get existing author record
+            const author = await this.getAuthor(authorAddress);
+            if (author) {
+              // Update with recalculated totals, but preserve totalArticles if it's higher
+              // (to account for deleted articles that should count toward lifetime total)
+              author.totalViews = Math.max(row.totalViews, 0);
+              author.totalPurchases = Math.max(row.totalPurchases, 0);
+              author.totalEarnings = Math.max(row.totalEarnings, 0);
+              author.totalArticles = Math.max(author.totalArticles, row.articleCount);
+              
+              await this.createOrUpdateAuthor(author);
+            }
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
     });
   }
 

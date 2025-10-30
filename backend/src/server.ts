@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { paymentMiddleware } from 'x402-express';
 import routes from './routes';
 
 dotenv.config();
@@ -10,6 +12,16 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// x402 Payment Middleware Configuration
+const facilitatorObj = { url: process.env.X402_FACILITATOR_URL || 'https://x402.org/facilitator' };
+const network = process.env.X402_NETWORK || 'base-sepolia';
+
+// Remove x402 middleware - we'll implement it manually per route
+// This allows dynamic pricing and dynamic payment recipients
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
