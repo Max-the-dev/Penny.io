@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, X, BookOpen, Tag } from 'lucide-react';
 import { apiService, Article } from '../services/api';
+import { useWallet } from '../contexts/WalletContext';
+import LikeButton from '../components/LikeButton';
 
 function Explore() {
+  const { address } = useWallet();
+  
   // Utility function to strip HTML tags from preview text
   const stripHtmlTags = (html: string) => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -39,6 +43,20 @@ function Explore() {
   const [sortBy, setSortBy] = useState('date'); // date, likes
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Articles');
+
+  // Handle like count changes
+  const handleLikeChange = (articleId: number, newLikeCount: number) => {
+    setArticles(prev => prev.map(article => 
+      article.id === articleId 
+        ? { ...article, likes: newLikeCount }
+        : article
+    ));
+    setFilteredArticles(prev => prev.map(article => 
+      article.id === articleId 
+        ? { ...article, likes: newLikeCount }
+        : article
+    ));
+  };
 
   // Fetch articles on component mount
   useEffect(() => {
@@ -272,23 +290,32 @@ function Explore() {
               ) : filteredArticles.length > 0 ? (
                 <div className="article-grid">
                   {filteredArticles.map((article) => (
-                    <Link key={article.id} to={`/article/${article.id}`} className="article-card-link">
-                      <div className="article-card">
+                    <div key={article.id} className="article-card">
+                      <Link to={`/article/${article.id}`} className="article-card-link">
                         <h3>{article.title}</h3>
                         <p>{stripHtmlTags(article.preview)}</p>
-                        <div className="article-meta">
-                          <span className="price">${article.price.toFixed(2)}</span>
-                          <div className="author-info">
-                            <span className="author">by @{article.authorAddress.slice(0, 6)}...{article.authorAddress.slice(-4)}</span>
-                            <span className="read-time">• {article.readTime}</span>
-                          </div>
+                      </Link>
+                      <div className="article-meta">
+                        <div className="author-info">
+                          <span className="author">by @{article.authorAddress.slice(0, 6)}...{article.authorAddress.slice(-4)}</span>
+                          <span className="read-time">• {article.readTime}</span>
                         </div>
-                        <div className="article-stats">
+                        <span className="price">${article.price.toFixed(2)}</span>
+                      </div>
+                      <div className="article-stats">
+                        <div className="article-stats-left">
                           <span className="views">{article.views} views</span>
                           <span className="purchases">{article.purchases} readers</span>
                         </div>
+                        <LikeButton 
+                          articleId={article.id} 
+                          userAddress={address} 
+                          initialLikes={article.likes}
+                          className="article-stats-like-button"
+                          onLikeChange={handleLikeChange}
+                        />
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               ) : (

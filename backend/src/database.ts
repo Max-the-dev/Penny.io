@@ -67,6 +67,18 @@ class Database {
       )
     `);
 
+    // Create user_likes table to track likes and prevent duplicates
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS user_likes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        articleId INTEGER NOT NULL,
+        userAddress TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (articleId) REFERENCES articles (id) ON DELETE CASCADE,
+        UNIQUE(articleId, userAddress)
+      )
+    `);
+
     console.log('Database tables initialized');
     this.migrateTables();
   }
@@ -80,6 +92,17 @@ class Database {
         console.error('Error adding categories column:', err);
       } else if (!err) {
         console.log('Added categories column to articles table');
+      }
+    });
+
+    // Add likes column to existing articles table if it doesn't exist
+    this.db.run(`
+      ALTER TABLE articles ADD COLUMN likes INTEGER DEFAULT 0
+    `, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding likes column:', err);
+      } else if (!err) {
+        console.log('Added likes column to articles table');
       }
     });
   }
@@ -485,6 +508,96 @@ class Database {
           } catch (error) {
             reject(error);
           }
+        }
+      );
+    });
+  }
+
+  // Like/Unlike methods
+  likeArticle(articleId: number, userAddress: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const now = new Date().toISOString();
+      
+      // Try to insert like (will fail if duplicate due to UNIQUE constraint)
+      this.db.run(
+        'INSERT INTO user_likes (articleId, userAddress, createdAt) VALUES (?, ?, ?)',
+        [articleId, userAddress, now],
+        function(err) {
+          if (err) {
+            if (err.message.includes('UNIQUE constraint failed')) {
+              // User already liked this article
+              resolve(false);
+            } else {
+              reject(err);
+            }
+            return;
+          }
+          
+          // Successfully added like, now increment article likes count
+          resolve(true);
+        }
+      );
+    });
+  }
+
+  unlikeArticle(articleId: number, userAddress: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM user_likes WHERE articleId = ? AND userAddress = ?',
+        [articleId, userAddress],
+        function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          // this.changes tells us how many rows were affected
+          resolve(this.changes > 0);
+        }
+      );
+    });
+  }
+
+  checkUserLikedArticle(articleId: number, userAddress: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT 1 FROM user_likes WHERE articleId = ? AND userAddress = ?',
+        [articleId, userAddress],
+        (err, row) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(!!row);
+        }
+      );
+    });
+  }
+
+  updateArticleLikesCount(articleId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Count actual likes from user_likes table and update article
+      this.db.get(
+        'SELECT COUNT(*) as likeCount FROM user_likes WHERE articleId = ?',
+        [articleId],
+        (err, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          
+          // Update the article's likes count
+          this.db.run(
+            'UPDATE articles SET likes = ? WHERE id = ?',
+            [row.likeCount, articleId],
+            (updateErr) => {
+              if (updateErr) {
+                reject(updateErr);
+              } else {
+                resolve();
+              }
+            }
+          );
         }
       );
     });

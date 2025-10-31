@@ -102,7 +102,8 @@ function Home() {
       </div>
       
       <div className="featured-articles">
-        <h2>Latest Articles</h2>
+        <h2></h2>
+        <h2>Recently Published</h2>
         <div className="article-grid">
           {loading ? (
             <div className="loading-articles">
@@ -110,19 +111,19 @@ function Home() {
             </div>
           ) : articles.length > 0 ? (
             articles.map((article) => (
-              <Link key={article.id} to={`/article/${article.id}`} className="article-card-link">
-                <div className="article-card">
+              <div key={article.id} className="article-card">
+                <Link to={`/article/${article.id}`} className="article-card-link">
                   <h3>{article.title}</h3>
                   <p>{stripHtmlTags(article.preview)}</p>
-                  <div className="article-meta">
-                    <span className="price">${article.price.toFixed(2)}</span>
-                    <div className="author-info">
-                      <span className="author">by @{article.authorAddress.slice(0, 6)}...{article.authorAddress.slice(-4)}</span>
-                      <span className="read-time">• {article.readTime}</span>
-                    </div>
+                </Link>
+                <div className="article-meta">
+                  <div className="author-info">
+                    <span className="author">by @{article.authorAddress.slice(0, 6)}...{article.authorAddress.slice(-4)}</span>
+                    <span className="read-time">• {article.readTime}</span>
                   </div>
+                  <span className="price">${article.price.toFixed(2)}</span>
                 </div>
-              </Link>
+              </div>
             ))
           ) : (
             <div className="no-articles">

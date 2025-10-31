@@ -17,6 +17,7 @@ export interface Article {
   earnings: number;
   readTime: string;
   categories: string[];
+  likes: number;
 }
 
 export interface Author {
@@ -166,6 +167,25 @@ class ApiService {
     return this.request<void>(`/articles/${articleId}/view`, {
       method: 'PUT'
     });
+  }
+
+  // Like/Unlike Article
+  async likeArticle(articleId: number, userAddress: string): Promise<ApiResponse<{ message: string; liked: boolean }>> {
+    return this.request<{ message: string; liked: boolean }>(`/articles/${articleId}/like`, {
+      method: 'POST',
+      body: JSON.stringify({ userAddress }),
+    });
+  }
+
+  async unlikeArticle(articleId: number, userAddress: string): Promise<ApiResponse<{ message: string; liked: boolean }>> {
+    return this.request<{ message: string; liked: boolean }>(`/articles/${articleId}/like`, {
+      method: 'DELETE',
+      body: JSON.stringify({ userAddress }),
+    });
+  }
+
+  async checkUserLikedArticle(articleId: number, userAddress: string): Promise<ApiResponse<{ liked: boolean }>> {
+    return this.request<{ liked: boolean }>(`/articles/${articleId}/like-status/${userAddress}`);
   }
 
   // Draft endpoints

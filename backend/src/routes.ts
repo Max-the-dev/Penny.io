@@ -210,7 +210,8 @@ router.post('/articles', async (req: Request, res: Response) => {
       purchases: 0,
       earnings: 0,
       readTime,
-      categories: categories || []
+      categories: categories || [],
+      likes: 0
     };
 
     const article = await db.createArticle(articleData);
@@ -863,6 +864,153 @@ router.get('/payment-status/:articleId/:userAddress', async (req: Request, res: 
       success: false,
       error: 'Failed to check payment status'
     });
+  }
+});
+
+// Like/Unlike Routes
+
+// POST /api/articles/:id/like - Like an article
+router.post('/articles/:id/like', async (req: Request, res: Response) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const { userAddress } = req.body;
+
+    if (!userAddress) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'User address is required'
+      };
+      return res.status(400).json(response);
+    }
+
+    if (isNaN(articleId)) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid article ID'
+      };
+      return res.status(400).json(response);
+    }
+
+    // Check if article exists
+    const article = await db.getArticleById(articleId);
+    if (!article) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Article not found'
+      };
+      return res.status(404).json(response);
+    }
+
+    // Try to like the article
+    const liked = await db.likeArticle(articleId, userAddress);
+    
+    if (liked) {
+      // Update the article's likes count
+      await db.updateArticleLikesCount(articleId);
+      
+      const response: ApiResponse<{ message: string; liked: boolean }> = {
+        success: true,
+        data: { message: 'Article liked successfully', liked: true }
+      };
+      res.json(response);
+    } else {
+      // User already liked this article
+      const response: ApiResponse<{ message: string; liked: boolean }> = {
+        success: true,
+        data: { message: 'You have already liked this article', liked: false }
+      };
+      res.json(response);
+    }
+  } catch (error) {
+    console.error('Error liking article:', error);
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to like article'
+    };
+    res.status(500).json(response);
+  }
+});
+
+// DELETE /api/articles/:id/like - Unlike an article
+router.delete('/articles/:id/like', async (req: Request, res: Response) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const { userAddress } = req.body;
+
+    if (!userAddress) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'User address is required'
+      };
+      return res.status(400).json(response);
+    }
+
+    if (isNaN(articleId)) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid article ID'
+      };
+      return res.status(400).json(response);
+    }
+
+    // Try to unlike the article
+    const unliked = await db.unlikeArticle(articleId, userAddress);
+    
+    if (unliked) {
+      // Update the article's likes count
+      await db.updateArticleLikesCount(articleId);
+      
+      const response: ApiResponse<{ message: string; liked: boolean }> = {
+        success: true,
+        data: { message: 'Article unliked successfully', liked: false }
+      };
+      res.json(response);
+    } else {
+      // User hadn't liked this article
+      const response: ApiResponse<{ message: string; liked: boolean }> = {
+        success: true,
+        data: { message: 'You have not liked this article', liked: false }
+      };
+      res.json(response);
+    }
+  } catch (error) {
+    console.error('Error unliking article:', error);
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to unlike article'
+    };
+    res.status(500).json(response);
+  }
+});
+
+// GET /api/articles/:id/like-status/:userAddress - Check if user liked article
+router.get('/articles/:id/like-status/:userAddress', async (req: Request, res: Response) => {
+  try {
+    const articleId = parseInt(req.params.id);
+    const { userAddress } = req.params;
+
+    if (isNaN(articleId)) {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid article ID'
+      };
+      return res.status(400).json(response);
+    }
+
+    const liked = await db.checkUserLikedArticle(articleId, userAddress);
+    
+    const response: ApiResponse<{ liked: boolean }> = {
+      success: true,
+      data: { liked }
+    };
+    res.json(response);
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to check like status'
+    };
+    res.status(500).json(response);
   }
 });
 

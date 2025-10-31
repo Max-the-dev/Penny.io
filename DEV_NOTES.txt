@@ -40,19 +40,119 @@ Coinbase Wallet Localhost Configuration
   ** EXPLORE PAGE / FUNCTIONALITY **
 
   2. Explore Page (Public Discovery)
-  - Validate home page will always shows 6 latest articles 
-  - /explore route with article grid
+]  - /explore route with article grid
         - all articles shows top articles 
-  - Categories/tags system
   - Sort by: newest, most viewed, highest rated
   - Pagination for large article lists
 
   3. Article Likes System
 
-  - Heart icon on article pages and cards
-  - Like count display
-  - Backend database integration
-  - Real-time like updates
+  - Article Popularity & Category Sorting - Implementation Plan
+
+  Current State Analysis:
+
+  - ✅ Views tracking: Already implemented and working
+  - ✅ Purchases tracking: Already implemented (represents "readers")
+  - ✅ Categories system: Already implemented with 16 categories
+  - ❌ Likes system: Not implemented yet
+  - ❌ Popularity scoring: No unified popularity metric
+
+  🎯 Suggested Implementation Plan:
+
+  Phase 1: Likes System (Database & Backend)
+
+  1. Add likes to database schema
+  ALTER TABLE articles ADD COLUMN likes INTEGER DEFAULT 0;
+  2. Create like/unlike API endpoints
+  POST /api/articles/:id/like     # Like an article
+  DELETE /api/articles/:id/like   # Unlike an article  
+  GET /api/articles/:id/likes     # Get like count
+  3. Track user likes to prevent duplicate likes
+    - Simple approach: Store in localStorage (client-side)
+    - Advanced approach: Create user_likes table with wallet addresses
+
+  Phase 2: Popularity Scoring Algorithm
+
+  Popularity Score Formula:
+  popularityScore = (views * 1) + (purchases * 10) + (likes * 5)
+
+  Rationale:
+  - Views (1x weight): Basic engagement indicator
+  - Purchases (10x weight): Strong intent signal - someone paid for it
+  - Likes (5x weight): Social validation, easier than purchase but more than view
+
+  Alternative time-decay formula:
+  // Boost recent content
+  const daysSincePublish = (Date.now() - publishDate) / (1000 * 60 * 60 * 24);
+  const timeFactor = Math.max(0.1, 1 - (daysSincePublish / 30)); // Decay over 30 days
+  popularityScore = baseScore * timeFactor;
+
+  Phase 3: Backend Implementation
+
+  1. Add popularity calculation to database
+  ALTER TABLE articles ADD COLUMN popularityScore REAL DEFAULT 0;
+  2. Create popularity update function
+  updatePopularityScore(articleId) {
+    const score = (views * 1) + (purchases * 10) + (likes * 5);
+    // Optional: Add time decay factor
+    db.updateArticlePopularity(articleId, score);
+  }
+  3. Update popularity when metrics change
+    - After view increment
+    - After like/unlike
+    - After purchase
+    - Daily batch recalculation job
+
+  Phase 4: Frontend Implementation
+
+  1. Add Like button component to articles
+  <LikeButton articleId={article.id} initialLikes={article.likes} />
+  2. Update sorting options on Explore page
+  sortOptions: [
+    { value: 'date', label: 'Latest' },
+    { value: 'popular', label: 'Most Popular' },    // NEW
+    { value: 'views', label: 'Most Viewed' },
+    { value: 'likes', label: 'Most Liked' }         // NEW
+  ]
+  3. Default category sorting to popularity
+  // When category is selected, default to popularity
+  if (selectedCategory !== 'All Articles') {
+    setSortBy('popular');
+  }
+
+  Phase 5: Enhanced Category Experience
+
+  1. Category-specific popular articles
+  // API endpoint: GET /api/articles?category=Technology&sortBy=popular
+  2. Trending in category indicators
+  <div className="trending-badge">🔥 Trending in {category}</div>
+  3. Category statistics
+  // Show total articles, avg popularity in each category
+
+  🚀 Implementation Priority:
+
+  Week 1 - Core Popularity:
+  1. ✅ Add likes column to database
+  2. ✅ Implement like/unlike API endpoints
+  3. ✅ Create popularity scoring algorithm
+  4. ✅ Add Like button to article pages
+
+  Week 2 - Explore Page Integration:
+  5. ✅ Update explore page sorting options
+  6. ✅ Implement popularity-based default sorting for categories
+  7. ✅ Add trending indicators
+
+  Week 3 - Advanced Features:
+  8. ✅ Time-decay popularity algorithm
+  9. ✅ Category-specific trending sections
+  10. ✅ Popular articles widget for homepage
+
+  🎯 Success Metrics:
+
+  - Articles with purchases/likes rank higher than view-only articles
+  - Recent popular content surfaces above old popular content
+  - Category selection defaults to most engaging content
+  - Users can easily discover trending content in their interests
 
   4. Enhanced Article Discovery
 

@@ -281,15 +281,25 @@ main {
   color: inherit;
   display: block;
 }
+
 .article-card {
   background: #ffffff;
   border: 1px solid #e1e8ed;
   border-radius: 12px;
   padding: 24px;
   transition: all 0.2s ease;
-  cursor: pointer;
   position: relative;
   overflow: hidden;
+}
+
+.article-card .article-card-link {
+  cursor: pointer;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.article-card .article-card-link:hover h3 {
+  color: #00ba7c;
 }
 
 .article-card:hover {
@@ -318,7 +328,6 @@ main {
   align-items: center;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #f1f3f4;
 }
 
 .price {
@@ -6123,16 +6132,38 @@ main {
 
 .article-stats {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 12px;
   font-size: 14px;
   color: #666;
+}
+
+.article-stats-left {
+  display: flex;
+  gap: 16px;
 }
 
 .article-stats span {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.article-stats-like-button {
+  padding: 2px 6px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #666;
+  border: 1px solid #e1e8ed;
+}
+
+.article-stats-like-button:hover:not(.like-button-disabled):not(.like-button-loading) {
+  background: rgba(255, 245, 245, 0.95);
+  border-color: #ff6b6b;
+  color: #ff6b6b;
 }
 
 .no-articles {
@@ -6215,7 +6246,15 @@ main {
   }
   
   .article-stats {
+    font-size: 13px;
+  }
+  
+  .article-stats-left {
     gap: 12px;
+  }
+  
+  .article-stats-like-button {
+    padding: 2px 4px;
     font-size: 13px;
   }
 }
@@ -6499,5 +6538,124 @@ main {
   .prompt-content svg {
     width: 48px;
     height: 48px;
+  }
+}
+
+/* Like Button Component */
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #e1e8ed;
+  border-radius: 20px;
+  background: white;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.like-button:hover:not(.like-button-disabled):not(.like-button-loading) {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  background-color: #fff5f5;
+  transform: translateY(-1px);
+}
+
+.like-button-liked {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  background-color: #fff5f5;
+}
+
+.like-button-liked:hover {
+  border-color: #e53e3e;
+  color: #e53e3e;
+  background-color: #fed7d7;
+}
+
+.like-button-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.like-button-loading {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.like-button svg {
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.like-button:hover:not(.like-button-disabled):not(.like-button-loading) svg {
+  transform: scale(1.1);
+}
+
+/* Like button in article cards */
+.article-meta .like-button {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+/* Like button in article detail */
+.article-header .like-button {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+}
+
+/* Article header with like button positioning */
+.article-card .article-header {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  border: none;
+  background: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.article-like-button {
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.article-like-button:hover:not(.like-button-disabled):not(.like-button-loading) {
+  background: rgba(255, 245, 245, 0.98);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile responsiveness for like button */
+@media (max-width: 768px) {
+  .like-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .like-button svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .article-card .article-header {
+    top: 12px;
+    right: 12px;
+  }
+  
+  .article-like-button {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
   }
 }
