@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Info, BookOpen, PenTool, HelpCircle, Mail, Shield, FileText, LayoutDashboard, Library, Zap } from 'lucide-react';
+import { Info, BookOpen, PenTool, HelpCircle, Mail, Shield, FileText, LayoutDashboard, Library, Wrench } from 'lucide-react';
 
 function Footer() {
   return (
@@ -9,6 +9,11 @@ function Footer() {
           <div className="footer-section">
             <h3>Penny.io</h3>
             <p>Micropayments for quality content</p>
+
+            {/* Donate Option */}
+            <div className='donate'>
+              <h3>donate</h3>
+            </div>
           </div>
           
           <div className="footer-section">
@@ -16,6 +21,7 @@ function Footer() {
             <ul>
               <li><Link to="/about"><Info size={16} /> About</Link></li>
               <li><Link to="/how-it-works"><BookOpen size={16} /> How it works</Link></li>
+              <li><Link to="/x402-test"><Wrench size={16}/>x402 Validation</Link></li>
               <li><Link to="/pricing"><FileText size={16} /> Pricing</Link></li>
             </ul>
           </div>
@@ -36,7 +42,6 @@ function Footer() {
               <li><Link to="/contact"><Mail size={16}/>Contact</Link></li>
               <li><Link to="/privacy"><Shield size={16}/>Privacy</Link></li>
               <li><Link to="/terms"><FileText size={16}/>Terms</Link></li>
-              <li><Link to="/x402-test"><Zap size={16}/>x402 Test</Link></li>
             </ul>
           </div>
         </div>
