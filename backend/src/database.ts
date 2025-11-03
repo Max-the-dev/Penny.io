@@ -245,8 +245,6 @@ class Database {
       .eq('id', articleId);
 
     if (error) throw error;
-
-    console.log(`✅ Updated popularity score for article ${articleId}: ${score}`);
   }
 
   async recalculateAllPopularityScores(): Promise<{ updated: number; errors: number }> {

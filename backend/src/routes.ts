@@ -734,8 +734,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       });
     }
 
-    console.log('📤 Uploading to Supabase Storage:', req.file.originalname);
-
     // Generate unique filename
     const fileExt = path.extname(req.file.originalname);
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -763,8 +761,6 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const { data: publicUrlData } = supabase.storage
       .from('article-images')
       .getPublicUrl(filePath);
-
-    console.log('✅ Upload successful:', publicUrlData.publicUrl);
 
     // TinyMCE expects this specific response format
     res.json({
