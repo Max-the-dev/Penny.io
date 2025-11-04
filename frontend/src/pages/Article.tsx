@@ -17,7 +17,8 @@ function Article() {
   const { data: walletClient } = useWalletClient();
   const [article, setArticle] = useState<ArticleType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
+  const [loadError, setLoadError] = useState<string>('');
+  const [paymentError, setPaymentError] = useState<string>('');
   const [hasPaid, setHasPaid] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showPaymentToast, setShowPaymentToast] = useState(false);
@@ -41,26 +42,26 @@ function Article() {
       if (!id) return;
       
       setLoading(true);
-      setError('');
-      
+      setLoadError('');
+
       try {
         const response = await apiService.getArticleById(parseInt(id));
         if (response.success && response.data) {
           setArticle(response.data);
-          
+
           // Check if user has already paid for this article
           if (address) {
             const hasPaidBefore = await x402PaymentService.checkPaymentStatus(
-              response.data.id, 
+              response.data.id,
               address
             );
             setHasPaid(hasPaidBefore);
           }
         } else {
-          setError(response.error || 'Article not found');
+          setLoadError(response.error || 'Article not found');
         }
       } catch (err) {
-        setError('Failed to load article');
+        setLoadError('Failed to load article');
         console.error('Error fetching article:', err);
       } finally {
         setLoading(false);
@@ -101,13 +102,13 @@ function Article() {
     );
   }
 
-  if (error || !article) {
+  if (loadError || !article) {
     return (
       <div className="article-page">
         <div className="container">
           <div className="article-not-found">
             <h1>Article not found</h1>
-            <p>{error || "The article you're looking for doesn't exist."}</p>
+            <p>{loadError || "The article you're looking for doesn't exist."}</p>
           </div>
         </div>
       </div>
@@ -121,11 +122,11 @@ function Article() {
     }
 
     setIsProcessingPayment(true);
-    setError('');
-    
+    setPaymentError('');
+
     if (!walletClient) {
       console.error('Wallet client not available');
-      setError('Unable to access connected wallet. Please reconnect and try again.');
+      setPaymentError('Unable to access connected wallet. Please reconnect and try again.');
       setIsProcessingPayment(false);
       return;
     }
@@ -138,17 +139,17 @@ function Article() {
 
       if (paymentResult.success) {
         setHasPaid(true);
-        setError('');
+        setPaymentError('');
         setShowPaymentToast(true);
         setTimeout(() => setShowPaymentToast(false), 3000);
       } else {
         const errorMessage = paymentResult.error || 'Payment verification failed';
         console.error('x402 payment failed:', errorMessage, paymentResult.rawResponse);
-        setError(errorMessage);
+        setPaymentError(errorMessage);
       }
     } catch (error) {
       console.error('Payment processing failed:', error);
-      setError(error instanceof Error ? error.message : 'Payment processing failed');
+      setPaymentError(error instanceof Error ? error.message : 'Payment processing failed');
     } finally {
       setIsProcessingPayment(false);
     }
@@ -237,15 +238,23 @@ function Article() {
                       <ConnectButton />
                     </div>
                   ) : (
-                    <button 
-                      className="pay-button"
-                      onClick={handlePayment}
-                      disabled={isProcessingPayment}
-                    >
-                      {isProcessingPayment ? 'Processing...' : `Pay $${article.price.toFixed(2)}`}
-                    </button>
+                    <>
+                      <button
+                        className="pay-button"
+                        onClick={handlePayment}
+                        disabled={isProcessingPayment}
+                      >
+                        {isProcessingPayment ? 'Processing...' : `Pay $${article.price.toFixed(2)}`}
+                      </button>
+
+                      {paymentError && (
+                        <div className="payment-error">
+                          <p>{paymentError}</p>
+                        </div>
+                      )}
+                    </>
                   )}
-                  
+
                   <div className="payment-benefits">
                     <p>✓ Instant access to full article</p>
                     <p>✓ Support the author directly</p>

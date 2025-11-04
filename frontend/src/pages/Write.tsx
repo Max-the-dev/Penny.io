@@ -242,10 +242,14 @@ function Write() {
     return `${minutes} min read`;
   };
 
-  // Field-specific validation helper
-  const getFieldError = (field: 'title' | 'content' | 'price' | 'categories'): string | null => {
+  // Field-specific validation helper (for display)
+  const getFieldError = (field: 'title' | 'content' | 'price'): string | null => {
     if (!showValidation) return null;
+    return getFieldErrorRaw(field);
+  };
 
+  // Raw validation without showValidation check (for form submission blocking)
+  const getFieldErrorRaw = (field: 'title' | 'content' | 'price'): string | null => {
     switch (field) {
       case 'title':
         if (!title.trim()) return 'Title is required';
@@ -266,10 +270,6 @@ function Write() {
         if (priceNum > 1.00) return 'Price cannot exceed $1.00';
         return null;
 
-      case 'categories':
-        if (selectedCategories.length > MAX_CATEGORIES) return `Maximum ${MAX_CATEGORIES} categories allowed`;
-        return null;
-
       default:
         return null;
     }
@@ -278,15 +278,13 @@ function Write() {
   // Check if form has any errors
   const validateForm = () => {
     const errors: string[] = [];
-    const titleError = getFieldError('title');
-    const contentError = getFieldError('content');
-    const priceError = getFieldError('price');
-    const categoriesError = getFieldError('categories');
+    const titleError = getFieldErrorRaw('title');
+    const contentError = getFieldErrorRaw('content');
+    const priceError = getFieldErrorRaw('price');
 
     if (titleError) errors.push(titleError);
     if (contentError) errors.push(contentError);
     if (priceError) errors.push(priceError);
-    if (categoriesError) errors.push(categoriesError);
 
     return errors;
   };
@@ -384,7 +382,7 @@ function Write() {
 
         {/* Main Content */}
         <div className="write-layout">
-          <form id="write-form" onSubmit={handleSubmit} className="write-form">
+          <form id="write-form" onSubmit={handleSubmit} className="write-form" noValidate>
             {/* Success Message */}
             {submitSuccess && (
               <div className="submit-success">
@@ -440,9 +438,9 @@ function Write() {
 
             {/* Action Buttons */}
             <div className="article-actions">
-              <div className="draft-actions">
-                <button 
-                  type="button" 
+              <div className="article-actions-left">
+                <button
+                  type="button"
                   onClick={() => {
                     if (showDrafts) {
                       setShowDrafts(false);
@@ -457,8 +455,8 @@ function Write() {
                   <FileText size={18} />
                   {loadingDrafts ? 'Loading...' : 'Load Draft'}
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={saveDraft}
                   className="action-btn save-btn"
                   disabled={isDraft}
@@ -466,8 +464,8 @@ function Write() {
                   <Save size={18} />
                   {isDraft ? 'Saved!' : 'Save Draft'}
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowPreview(true)}
                   className="action-btn preview-btn"
                   disabled={!title.trim() || !content.trim()}
@@ -476,8 +474,9 @@ function Write() {
                   Preview
                 </button>
               </div>
-              <button 
-                type="submit" 
+              <div className="article-actions-spacer" />
+              <button
+                type="submit"
                 className="action-btn publish-btn"
                 disabled={isSubmitting}
               >
@@ -666,7 +665,6 @@ function Write() {
                   rows={1}
                   style={{ resize: 'none', overflow: 'hidden' }}
                   maxLength={MAX_TITLE_LENGTH}
-                  required
                 />
                 <div className="title-counter">
                   <span className={title.length > MAX_TITLE_LENGTH * 0.9 ? 'char-warning' : ''}>
@@ -689,11 +687,8 @@ function Write() {
                     id="price"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    min="0.01"
-                    max="1.00"
                     step="0.01"
                     placeholder="0.05"
-                    required
                   />
                 </div>
                 {getFieldError('price') && (
@@ -737,12 +732,6 @@ function Write() {
                     <span className="selected-list">{selectedCategories.join(', ')}</span>
                   </div>
                 )}
-                {getFieldError('categories') && (
-                  <div className="field-warning">
-                    <span className="warning-icon">⚠</span>
-                    <span className="warning-text">{getFieldError('categories')}</span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -758,6 +747,12 @@ function Write() {
                   </span>
                 </div>
               </div>
+              {getFieldError('content') && (
+                <div className="field-warning">
+                  <span className="warning-icon">⚠</span>
+                  <span className="warning-text">{getFieldError('content')}</span>
+                </div>
+              )}
               <div className="tinymce-wrapper">
                 <Editor
                   apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
@@ -837,12 +832,6 @@ function Write() {
                     smart_paste: true
                   }}
                 />
-                {getFieldError('content') && (
-                  <div className="field-warning">
-                    <span className="warning-icon">⚠</span>
-                    <span className="warning-text">{getFieldError('content')}</span>
-                  </div>
-                )}
               </div>
             </div>
 

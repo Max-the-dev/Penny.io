@@ -230,7 +230,7 @@ export function checkContentQuality(content: string): SpamCheckResult {
   if (uniqueWords.size < SPAM_CONFIG.MIN_UNIQUE_WORDS) {
     return {
       isSpam: true,
-      reason: 'Low content quality',
+      reason: 'Spam Detected',
       details: `Content must contain at least ${SPAM_CONFIG.MIN_UNIQUE_WORDS} unique words`
     };
   }
@@ -241,8 +241,8 @@ export function checkContentQuality(content: string): SpamCheckResult {
   if (repetitionRatio > SPAM_CONFIG.MAX_REPETITION_RATIO) {
     return {
       isSpam: true,
-      reason: 'Excessive repetition detected',
-      details: 'Content contains too many repeated words or phrases'
+      reason: 'Spam Detected',
+      details: 'Content contains too many similar phrases'
     };
   }
 
@@ -256,7 +256,7 @@ export function checkContentQuality(content: string): SpamCheckResult {
   if (gibberishRatio > 0.3) {
     return {
       isSpam: true,
-      reason: 'Suspicious content pattern',
+      reason: 'Spam Detected',
       details: 'Content appears to contain gibberish or invalid text'
     };
   }

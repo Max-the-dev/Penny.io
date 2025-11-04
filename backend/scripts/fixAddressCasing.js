@@ -1,3 +1,5 @@
+// Script to force db addresses into proper EIP-55 checksum format
+
 const { pgPool } = require('../dist/supabaseClient.js');
 const { getAddress } = require('ethers');
 
