@@ -4,7 +4,7 @@
 
   ## Validation Errors (Top of form)
   - Trigger: Click "Publish Article" with invalid form
-  - Shows: warning message in black box 
+  - Shows: Error summary on top of page
   - Messages:
     - "Title is required"
     - "Content must be at least 50 characters"

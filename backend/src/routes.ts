@@ -274,6 +274,37 @@ router.get('/articles/:id', readLimiter, async (req: Request, res: Response) => 
 });
 
 // POST /api/articles - Create new article
+router.post('/articles/validate', writeLimiter, validate(createArticleSchema), async (req: Request, res: Response) => {
+  try {
+    const { title, content, authorAddress }: CreateArticleRequest = req.body;
+
+    const spamCheck = await checkForSpam(authorAddress, title, content);
+    if (spamCheck.isSpam) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: spamCheck.reason || 'Content blocked by spam filter',
+        message: spamCheck.details
+      };
+      return res.json(response);
+    }
+
+    const response: ApiResponse<null> = {
+      success: true,
+      message: 'Validation passed'
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error validating article:', error);
+    const response: ApiResponse<null> = {
+      success: false,
+      error: 'Failed to validate article'
+    };
+    res.status(500).json(response);
+  }
+});
+
+// POST /api/articles - Create new article
 router.post('/articles', writeLimiter, validate(createArticleSchema), async (req: Request, res: Response) => {
   try {
     const { title, content, price, authorAddress, categories }: CreateArticleRequest = req.body;

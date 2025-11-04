@@ -1,9 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Save, Send, FileText, Clock, Eye, CheckCircle, X } from 'lucide-react';
-import { getCurrentDateString } from '../utils/dateUtils';
-import { apiService, Draft } from '../services/api';
+import { Save, Send, FileText, Clock, Eye, CheckCircle, X, AlertTriangle } from 'lucide-react';
+import { apiService, Draft, CreateArticleRequest } from '../services/api';
 import { Editor } from '@tinymce/tinymce-react';
 
 function Write() {
@@ -43,7 +42,7 @@ function Write() {
   const [isDraft, setIsDraft] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string>('');
-  const [showValidation, setShowValidation] = useState<boolean>(false);
+  const [showValidationSummary, setShowValidationSummary] = useState<boolean>(false);
   const [availableDrafts, setAvailableDrafts] = useState<Draft[]>([]);
   const [showDrafts, setShowDrafts] = useState<boolean>(false);
   const [loadingDrafts, setLoadingDrafts] = useState<boolean>(false);
@@ -62,6 +61,12 @@ function Write() {
   const [hasTyped, setHasTyped] = useState<boolean>(false);
   const fullText = "Your words can change the world.";
 
+  const clearSubmitError = () => {
+    if (submitError) {
+      setSubmitError('');
+    }
+  };
+
   // Typing animation effect
   useEffect(() => {
     if (!hasTyped && displayText.length < fullText.length) {
@@ -78,20 +83,14 @@ function Write() {
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev => {
       if (prev.includes(category)) {
-        // Always allow deselecting
         return prev.filter(c => c !== category);
-      } else if (prev.length >= MAX_CATEGORIES) {
-        // Show error when trying to select more than max
-        setSubmitError(`Maximum ${MAX_CATEGORIES} categories allowed. Remove one to add another.`);
-        setTimeout(() => setSubmitError(''), 3000); // Clear after 3 seconds
-        return prev;
-      } else {
-        // Allow selecting
-        if (submitError.includes('categories')) {
-          setSubmitError(''); // Clear category error when valid selection
-        }
-        return [...prev, category];
       }
+
+      if (prev.length >= MAX_CATEGORIES) {
+        return prev;
+      }
+
+      return [...prev, category];
     });
   };
 
@@ -123,13 +122,8 @@ function Write() {
     }
   }, [address]);
 
-
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Show validation from now on
-    setShowValidation(true);
     
     if (!address) {
       setSubmitError('Please connect your wallet first');
@@ -139,10 +133,55 @@ function Write() {
     // Check for validation errors
     const errors = validateForm();
     if (errors.length > 0) {
-      // Inline warnings will show up - scroll to top so user sees them
+      setShowValidationSummary(true);
+      setSubmitError('');
+      // Scroll to top so the validation summary is immediately visible
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    if (submitError) {
+      setShowValidationSummary(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const priceValue = parseFloat(price);
+    if (!Number.isFinite(priceValue)) {
+      setSubmitError('Valid price is required');
+      setShowValidationSummary(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const articlePreview: CreateArticleRequest = {
+      title,
+      content,
+      price: priceValue,
+      authorAddress: address!,
+      categories: selectedCategories,
+    };
+
+    try {
+      const validationResponse = await apiService.validateArticle(articlePreview);
+      if (!validationResponse.success) {
+        const combinedMessage = [validationResponse.error, validationResponse.message]
+          .filter(Boolean)
+          .join('\n');
+        setSubmitError(combinedMessage || 'Article validation failed');
+        setShowValidationSummary(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    } catch (error) {
+      console.error('Article validation request failed:', error);
+      const message = error instanceof Error ? error.message : 'Unable to validate article';
+      setSubmitError(message);
+      setShowValidationSummary(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setSubmitError('');
 
     // Show confirmation modal instead of publishing immediately
     setShowPublishConfirm(true);
@@ -150,15 +189,22 @@ function Write() {
 
   const handlePublishConfirm = async () => {
     setIsSubmitting(true);
-    setSubmitError('');
     setSubmitSuccess(false);
     setShowPublishConfirm(false);
 
     try {
-      const articleData = {
+      const priceValue = parseFloat(price);
+      if (!Number.isFinite(priceValue)) {
+        setSubmitError('Valid price is required');
+        setShowValidationSummary(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const articleData: CreateArticleRequest = {
         title,
         content,
-        price: parseFloat(price),
+        price: priceValue,
         authorAddress: address!,
         categories: selectedCategories
       };
@@ -193,7 +239,8 @@ function Write() {
         setContent('');
         setPrice('0.05');
         setSelectedCategories([]);
-        setShowValidation(false);
+        setShowValidationSummary(false);
+        setSubmitError('');
       } else {
         // Handle backend validation errors with details
         const errorMessage = response.error || 'Failed to create article';
@@ -206,6 +253,8 @@ function Write() {
         } else {
           setSubmitError(errorMessage);
         }
+
+        setShowValidationSummary(true);
 
         // Scroll to top to show error message
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -220,6 +269,8 @@ function Write() {
         setSubmitError(err.message || 'An unexpected error occurred');
       }
       console.error('Error creating article:', error);
+
+      setShowValidationSummary(true);
 
       // Scroll to top to show error message
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -242,13 +293,7 @@ function Write() {
     return `${minutes} min read`;
   };
 
-  // Field-specific validation helper (for display)
-  const getFieldError = (field: 'title' | 'content' | 'price'): string | null => {
-    if (!showValidation) return null;
-    return getFieldErrorRaw(field);
-  };
-
-  // Raw validation without showValidation check (for form submission blocking)
+  // Field validation helper for summary
   const getFieldErrorRaw = (field: 'title' | 'content' | 'price'): string | null => {
     switch (field) {
       case 'title':
@@ -342,6 +387,7 @@ function Write() {
     setContent(draft.content);
     setPrice(draft.price.toString());
     setShowDrafts(false);
+    clearSubmitError();
     console.log('Loaded draft:', draft);
   };
 
@@ -361,6 +407,12 @@ function Write() {
 
   const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
   const charCount = content.length;
+  const computedValidationErrors = validateForm();
+  const validationErrors = showValidationSummary ? computedValidationErrors : [];
+  const summaryMessages = showValidationSummary
+    ? [...validationErrors, ...(submitError ? [submitError] : [])]
+    : [];
+  const hasSummaryErrors = summaryMessages.length > 0;
 
   if (!isConnected) {
     return (
@@ -416,7 +468,7 @@ function Write() {
             )}
 
             {/* Submit Error Message - Moved to top for visibility */}
-            {submitError && validateForm().length === 0 && (
+            {submitError && !showValidationSummary && (
               <div className="submit-error">
                 <div className="error-icon">
                   <X size={24} />
@@ -432,6 +484,40 @@ function Write() {
                 >
                   <X size={18} />
                 </button>
+              </div>
+            )}
+
+            {/* Validation Summary */}
+            {showValidationSummary && (
+              <div
+                className={`validation-summary ${
+                  hasSummaryErrors
+                    ? 'validation-summary--errors'
+                    : 'validation-summary--success'
+                }`}
+              >
+                <div className="summary-icon">
+                  {hasSummaryErrors ? <AlertTriangle size={22} /> : <CheckCircle size={22} />}
+                </div>
+                <div className="summary-content">
+                  {hasSummaryErrors ? (
+                    <>
+                      <h4>Please fix the following issues</h4>
+                      <ul>
+                        {summaryMessages.map((error, index) => (
+                          <li key={`${error}-${index}`} style={{ whiteSpace: 'pre-wrap' }}>
+                            {error}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  ) : (
+                    <>
+                      <h4>Your article is ready to publish</h4>
+                      <p>Click "Publish Article" to continue.</p>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -651,6 +737,7 @@ function Write() {
                   value={title}
                   onChange={(e) => {
                     setTitle(e.target.value);
+                    clearSubmitError();
                     // Auto-resize height
                     e.target.style.height = 'auto';
                     e.target.style.height = e.target.scrollHeight + 'px';
@@ -671,12 +758,6 @@ function Write() {
                     {title.length}/{MAX_TITLE_LENGTH} characters
                   </span>
                 </div>
-                {getFieldError('title') && (
-                  <div className="field-warning">
-                    <span className="warning-icon">⚠</span>
-                    <span className="warning-text">{getFieldError('title')}</span>
-                  </div>
-                )}
               </div>
               <div className="price-section">
                 <label htmlFor="price" className="input-label">Price</label>
@@ -686,17 +767,14 @@ function Write() {
                     type="number"
                     id="price"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => {
+                      setPrice(e.target.value);
+                      clearSubmitError();
+                    }}
                     step="0.01"
                     placeholder="0.05"
                   />
                 </div>
-                {getFieldError('price') && (
-                  <div className="field-warning">
-                    <span className="warning-icon">⚠</span>
-                    <span className="warning-text">{getFieldError('price')}</span>
-                  </div>
-                )}
               </div>
 
               {/* Categories Section */}
@@ -714,7 +792,10 @@ function Write() {
                         key={category}
                         type="button"
                         className={`category-tag ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                        onClick={() => toggleCategory(category)}
+                        onClick={() => {
+                          toggleCategory(category);
+                          clearSubmitError();
+                        }}
                         disabled={isDisabled}
                         title={isDisabled ? `Maximum ${MAX_CATEGORIES} categories selected. Remove one to add another.` : ''}
                       >
@@ -747,17 +828,14 @@ function Write() {
                   </span>
                 </div>
               </div>
-              {getFieldError('content') && (
-                <div className="field-warning">
-                  <span className="warning-icon">⚠</span>
-                  <span className="warning-text">{getFieldError('content')}</span>
-                </div>
-              )}
               <div className="tinymce-wrapper">
                 <Editor
                   apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
                   value={content}
-                  onEditorChange={(content) => setContent(content)}
+                  onEditorChange={(content) => {
+                    setContent(content);
+                    clearSubmitError();
+                  }}
                   init={{
                     height: 700,
                     menubar: false,
@@ -834,14 +912,6 @@ function Write() {
                 />
               </div>
             </div>
-
-            {/* Validation Success Status - only show when no errors */}
-            {showValidation && validateForm().length === 0 && (
-              <div className="validation-success">
-                <h4>✅ Ready to publish!</h4>
-                <p>Your article looks good and is ready to be published.</p>
-              </div>
-            )}
 
           </form>
         </div>

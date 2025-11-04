@@ -18,7 +18,7 @@ const SPAM_CONFIG = {
   MAX_ARTICLES_PER_DAY: 20,     // Increased from 10 - reasonable daily limit for active authors
 
   // Content quality thresholds
-  MIN_UNIQUE_WORDS: 50,
+  MIN_UNIQUE_WORDS: 30,
   MAX_REPETITION_RATIO: 0.65,   // Increased from 0.3 to 0.65 - most legitimate content has 40-60% repetition
 
   // Duplicate detection

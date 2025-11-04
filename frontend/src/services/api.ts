@@ -132,6 +132,13 @@ class ApiService {
     });
   }
 
+  async validateArticle(article: CreateArticleRequest): Promise<ApiResponse<{ message?: string }>> {
+    return this.request<{ message?: string }>('/articles/validate', {
+      method: 'POST',
+      body: JSON.stringify(article),
+    });
+  }
+
   async updateArticle(id: number, article: CreateArticleRequest): Promise<ApiResponse<Article>> {
     return this.request<Article>(`/articles/${id}`, {
       method: 'PUT',
