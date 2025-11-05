@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Edit3, Save, Eye, ArrowLeft, X, CheckCircle } from 'lucide-react';
+import { Save, Eye, ArrowLeft, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Editor } from '@tinymce/tinymce-react';
 import { apiService, Article } from '../services/api';
 import { sanitizeHTML } from '../utils/sanitize';
@@ -21,7 +21,70 @@ function EditArticle() {
   const [loading, setLoading] = useState<boolean>(true);
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [showUpdateConfirm, setShowUpdateConfirm] = useState<boolean>(false);
-  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showValidationSummary, setShowValidationSummary] = useState<boolean>(false);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
+  // Content limits (match Write page)
+  const MAX_TITLE_LENGTH = 200;
+  const MIN_CONTENT_LENGTH = 50;
+  const MAX_CONTENT_LENGTH = 50000;
+
+  const clearSubmitFeedback = () => {
+    if (submitError) {
+      setSubmitError('');
+    }
+    if (submitSuccess) {
+      setSubmitSuccess(false);
+    }
+  };
+
+  const getFieldError = (field: 'title' | 'content' | 'price'): string | null => {
+    switch (field) {
+      case 'title':
+        if (!title.trim()) return 'Title is required';
+        if (title.trim().length > MAX_TITLE_LENGTH) return `Title must be ${MAX_TITLE_LENGTH} characters or less`;
+        return null;
+      case 'content': {
+        if (!content.trim()) return 'Content is required';
+        const textContent = content.replace(/<[^>]*>/g, '').trim();
+        if (textContent.length < MIN_CONTENT_LENGTH) return `Content must be at least ${MIN_CONTENT_LENGTH} characters`;
+        if (content.length > MAX_CONTENT_LENGTH) return `Content must be ${MAX_CONTENT_LENGTH.toLocaleString()} characters or less`;
+        return null;
+      }
+      case 'price': {
+        const priceValue = parseFloat(price);
+        if (!Number.isFinite(priceValue)) return 'Valid price is required';
+        if (priceValue < 0.01) return 'Price must be at least $0.01';
+        if (priceValue > 1.0) return 'Price cannot exceed $1.00';
+        return null;
+      }
+      default:
+        return null;
+    }
+  };
+
+  const validateForm = () => {
+    const errors: string[] = [];
+    const titleError = getFieldError('title');
+    const contentError = getFieldError('content');
+    const priceError = getFieldError('price');
+
+    if (titleError) errors.push(titleError);
+    if (contentError) errors.push(contentError);
+    if (priceError) errors.push(priceError);
+
+    return errors;
+  };
+
+  const computedValidationErrors = validateForm();
+  const validationErrors = showValidationSummary ? computedValidationErrors : [];
+  const summaryMessages = showValidationSummary
+    ? [...validationErrors, ...(submitError ? [submitError] : [])]
+    : [];
+  const hasSummaryErrors = summaryMessages.length > 0;
+
+  const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const charCount = content.length;
 
   // Load article data on component mount
   useEffect(() => {
@@ -42,6 +105,9 @@ function EditArticle() {
         setTitle(articleData.title);
         setContent(articleData.content);
         setPrice(articleData.price.toString());
+        setSubmitError('');
+        setSubmitSuccess(false);
+        setShowValidationSummary(false);
       } else {
         setSubmitError('Article not found');
       }
@@ -59,27 +125,40 @@ function EditArticle() {
   const handleUpdateArticle = async () => {
     if (!address || !article) return;
 
+    const priceValue = parseFloat(price);
+    if (!Number.isFinite(priceValue)) {
+      setSubmitError('Valid price is required');
+      setShowValidationSummary(true);
+      return;
+    }
+
     setIsSubmitting(true);
+    setShowUpdateConfirm(false);
     setSubmitError('');
+    setSubmitSuccess(false);
 
     try {
       const response = await apiService.updateArticle(article.id, {
         title: title.trim(),
         content: content.trim(),
-        price: parseFloat(price),
+        price: priceValue,
         authorAddress: address
       });
 
       if (response.success) {
-        setSuccessMessage('Article updated successfully!');
-        setShowUpdateConfirm(false);
-        // Don't auto-redirect - let user manually dismiss or navigate
+        setShowValidationSummary(false);
+        setSubmitError('');
+        setSubmitSuccess(true);
       } else {
         setSubmitError(response.error || 'Failed to update article');
+        setShowValidationSummary(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
       setSubmitError('An unexpected error occurred');
+      setShowValidationSummary(true);
       console.error('Error updating article:', error);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -97,7 +176,39 @@ function EditArticle() {
     setShowPreview(false);
   };
 
-  const handleUpdateConfirm = () => {
+  const handleUpdateConfirm = async () => {
+    if (!address) {
+      setSubmitError('Please connect your wallet first');
+      setShowValidationSummary(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setShowValidationSummary(true);
+      setSubmitError('');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (submitError) {
+      setShowValidationSummary(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const priceValue = parseFloat(price);
+    if (!Number.isFinite(priceValue)) {
+      setSubmitError('Valid price is required');
+      setShowValidationSummary(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setSubmitError('');
+    setShowValidationSummary(false);
+    setSubmitSuccess(false);
     setShowUpdateConfirm(true);
   };
 
@@ -164,7 +275,7 @@ function EditArticle() {
         <div className="write-layout">
           <form className="write-form">
             {/* Success Message */}
-            {successMessage && (
+            {submitSuccess && (
               <div className="submit-success">
                 <div className="success-icon">
                   <CheckCircle size={24} />
@@ -184,11 +295,50 @@ function EditArticle() {
                 </div>
                 <button 
                   type="button" 
-                  onClick={() => setSuccessMessage('')}
+                  onClick={() => setSubmitSuccess(false)}
                   className="success-close-btn"
                 >
                   <X size={18} />
                 </button>
+              </div>
+            )}
+
+            {/* Submit Error Message */}
+            {submitError && !showValidationSummary && (
+              <div className="submit-error">
+                <div className="error-icon">
+                  <X size={24} />
+                </div>
+                <div className="error-content">
+                  <h4>Unable to Update Article</h4>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{submitError}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSubmitError('')}
+                  className="error-close-btn"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
+
+            {/* Validation Summary */}
+            {showValidationSummary && hasSummaryErrors && (
+              <div className="validation-summary validation-summary--errors">
+                <div className="summary-icon">
+                  <AlertTriangle size={22} />
+                </div>
+                <div className="summary-content">
+                  <h4>Please fix the following issues</h4>
+                  <ul>
+                    {summaryMessages.map((error, index) => (
+                      <li key={`${error}-${index}`} style={{ whiteSpace: 'pre-wrap' }}>
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
 
@@ -217,19 +367,12 @@ function EditArticle() {
                 type="button" 
                 onClick={handleUpdateConfirm}
                 className="action-btn publish-btn"
-                disabled={isSubmitting || !title.trim() || !content.trim()}
+                disabled={isSubmitting}
               >
                 <Save size={18} />
                 {isSubmitting ? 'Updating...' : 'Update Article'}
               </button>
             </div>
-
-            {/* Error Message */}
-            {submitError && (
-              <div className="error-message">
-                <p>❌ {submitError}</p>
-              </div>
-            )}
 
             {/* Article Details */}
             <div className="article-inputs">
@@ -239,6 +382,7 @@ function EditArticle() {
                   id="title"
                   value={title}
                   onChange={(e) => {
+                    clearSubmitFeedback();
                     setTitle(e.target.value);
                     // Auto-resize height
                     e.target.style.height = 'auto';
@@ -253,12 +397,12 @@ function EditArticle() {
                   className="title-input-auto"
                   rows={1}
                   style={{ resize: 'none', overflow: 'hidden' }}
-                  maxLength={200}
+                  maxLength={MAX_TITLE_LENGTH}
                   required
                 />
                 <div className="title-counter">
-                  <span className={title.length > 200 * 0.9 ? 'char-warning' : ''}>
-                    {title.length}/200 characters
+                  <span className={title.length > MAX_TITLE_LENGTH * 0.9 ? 'char-warning' : ''}>
+                    {title.length}/{MAX_TITLE_LENGTH} characters
                   </span>
                 </div>
               </div>
@@ -270,7 +414,10 @@ function EditArticle() {
                     type="number"
                     id="price"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => {
+                      clearSubmitFeedback();
+                      setPrice(e.target.value);
+                    }}
                     min="0.01"
                     max="1.00"
                     step="0.01"
@@ -286,16 +433,19 @@ function EditArticle() {
               <div className="content-header">
                 <label htmlFor="content" className="input-label">Article Body</label>
                 <div className="write-stats">
-                  <span>{content.replace(/<[^>]*>/g, '').split(/\s+/).filter(word => word.length > 0).length} words</span>
+                  <span>{wordCount} words</span>
                   <span>•</span>
-                  <span>{content.replace(/<[^>]*>/g, '').length}/50000 characters</span>
+                  <span>{charCount}/{MAX_CONTENT_LENGTH.toLocaleString()} characters</span>
                 </div>
               </div>
               <div className="tinymce-wrapper">
                 <Editor
                   apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
                   value={content}
-                  onEditorChange={(content) => setContent(content)}
+                  onEditorChange={(content) => {
+                    clearSubmitFeedback();
+                    setContent(content);
+                  }}
                   init={{
                     height: 700,
                     menubar: false,
@@ -454,7 +604,7 @@ function EditArticle() {
                     <span>•</span>
                     <span className="preview-read-time">{calculateReadTime(content)}</span>
                     <span>•</span>
-                    <span className="preview-word-count">{content.replace(/<[^>]*>/g, '').split(/\s+/).filter(word => word.length > 0).length} words</span>
+                    <span className="preview-word-count">{wordCount} words</span>
                   </div>
                 </div>
                 <div className="preview-body">
@@ -471,9 +621,9 @@ function EditArticle() {
                 </button>
                 <button 
                   type="button" 
-                  onClick={() => {
+                  onClick={async () => {
                     setShowPreview(false);
-                    setShowUpdateConfirm(true);
+                    await handleUpdateConfirm();
                   }}
                   className="action-btn publish-btn"
                 >
@@ -498,7 +648,7 @@ function EditArticle() {
                   <div className="confirm-stats">
                     <span>Price: <strong>${parseFloat(price).toFixed(2)}</strong></span>
                     <span>Read time: <strong>{calculateReadTime(content)}</strong></span>
-                    <span>Word count: <strong>{content.replace(/<[^>]*>/g, '').split(/\s+/).filter(word => word.length > 0).length} words</strong></span>
+                    <span>Word count: <strong>{wordCount} words</strong></span>
                   </div>
                 </div>
                 <p className="confirm-message">

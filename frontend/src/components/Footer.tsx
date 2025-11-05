@@ -49,8 +49,12 @@ function Footer() {
             <h3>Penny.io</h3>
             <p>Micropayments for quality content</p>
 
-            {/* Donate Option */}
-            <div className="donate">
+            {/* Action Buttons */}
+            <div className="footer-actions">
+              <Link to="/x402-test" className="x402-validation-button">
+                <Wrench size={16} />
+                <span>x402 Test</span>
+              </Link>
               <button
                 type="button"
                 className="donate-button"
@@ -70,7 +74,6 @@ function Footer() {
             <ul>
               <li><Link to="/about"><Info size={16} /> About</Link></li>
               <li><Link to="/how-it-works"><BookOpen size={16} /> How it works</Link></li>
-              <li><Link to="/x402-test"><Wrench size={16}/>x402 Validation</Link></li>
               <li><Link to="/pricing"><FileText size={16} /> Pricing</Link></li>
             </ul>
           </div>

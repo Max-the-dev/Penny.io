@@ -1332,6 +1332,42 @@ main {
   margin-top: 20px;
 }
 
+/* Footer Actions Container */
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* x402 Validation Button (Green) */
+.x402-validation-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
+}
+
+.x402-validation-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(16, 185, 129, 0.3);
+}
+
+.x402-validation-button:active {
+  transform: translateY(0);
+}
+
+/* Donate Button (Blue/Purple) */
 .donate-button {
   display: inline-flex;
   align-items: center;

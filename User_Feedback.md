@@ -24,7 +24,7 @@
   - Trigger: Article published successfully
   - Shows: Green box with icon + close button, "Article Published Successfully! 🎉"
   - Actions: "View in Dashboard", "Write Another Article" buttons
-  - Disappears if "Write Another Article" is clicked 
+  - Disappears if "Write Another Article" is clicked OR on input
 
 
   ## Draft Save Feedback (Button state)
@@ -39,6 +39,34 @@
 
 
   ---
+  
+  
+  # Edit Page (/edit)
+  
+  ## Validation Errors (Top of form)
+  - Trigger: Click "Update Article" with invalid form
+  - Shows: Error summary on top of page
+  - Messages:
+    - "Title is required"
+    - "Content must be at least 50 characters"
+    - "Content must be 25,000 characters or less"
+    - "Price must be between $0.01 and $1.00" 
+
+  ## Submit Errors (Top of form)
+  Trigger: API/backend rejects article update
+  - Shows: Summary in yellow box - context dependent 
+  - Messages:
+    - Rate limiting: "Maximum 5 articles per hour allowed"
+    - Validation: Field-specific errors from Zod
+    - Network: "An unexpected error occurred"
+  
+  ## Success Message 
+  - Trigger: Article updated successfully
+  - Shows: Green box with icon + close button, "Article Published Successfully! 🎉"
+  - Actions: "Back to Dashboard"
+  - Disappears on input 
+
+
   # Dashboard Page (/dashboard)
 
   ## Connect Wallet Prompt (Center screen)
@@ -49,7 +77,7 @@
   ## Error Message (Top of articles section)
   - Trigger: API fetch fails
   - Shows: Red box with "❌ {error}", "Try Again" button
-  - Messages: "Failed to fetch articles", network errors
+  - Messages: "Failed to fetch articles", "Failed ot fetch author", network errors
 
   ## Loading State (Articles table)
   - Trigger: Fetching articles
@@ -62,10 +90,12 @@
 
   ## Delete Confirmation Modal (Overlay)
   - Trigger: Click delete icon on article
+  - Lock UI while modal is open
   - Shows: Modal with article title, "This action cannot be undone."
   - Buttons: "Cancel", "Delete Article" (turns to "Deleting...")
 
   ---
+  
   # Explore Page (/explore)
 
   ## Loading State (Articles grid)
@@ -86,6 +116,7 @@
   - Shows: "You've reached the end!" text
 
   ---
+  
   # Article Page (/article/:id)
 
   ## Connect Wallet Prompt (Paywall)
@@ -108,6 +139,25 @@
   - Shows: Red text below pay button with error message
   - Messages: "Payment verification failed", wallet errors
 
+  ## Tip Success (Modal)
+  - Trigger: Tip sent successfully
+  - Shows: "✨ Tip sent successfully! Thank you..."
+  - Location: Inside tip modal
+
+  ## Donate (Modal)
+
+  ## ADDT. Payment VALIDATION DETAILS 
+  - Payment success toast location: Toast exists, but CSS anchors it top-left (frontend/src/App.css:1691); the doc’s “top
+    right” note is inaccurate. Adjust position or documentation as needed.
+  - Payment errors & author banner: Inline error copy renders under the pay button (frontend/src/pages/Article.tsx:247), and
+    the author notice banner matches (frontend/src/pages/Article.tsx:259). To test errors, have the payment service reject and
+    ensure the message surfaces.
+  - Tip modal feedback: The success message sits inside the modal (frontend/src/pages/Article.tsx:356). Trigger by stubbing
+    handleTip to resolve and confirm the copy.
+
+
+
+
   ## Author Notice (Banner)
   - Trigger: Author viewing own article
   - Shows: "✍️ You're viewing your own article!"
@@ -121,15 +171,15 @@
   - Trigger: Invalid article ID or deleted
   - Shows: "Article not found" heading + error description
 
-  ## Tip Success (Modal)
-  - Trigger: Tip sent successfully
-  - Shows: "✨ Tip sent successfully! Thank you..."
-  - Location: Inside tip modal
+ 
 
   ---
+  
   # Backend API Responses (Status Codes)
 
-  400 - Validation Errors
+ 400 – Validation errors
+  All Zod failures look like:
+
   {
     "success": false,
     "error": "Validation failed",
@@ -139,59 +189,57 @@
     ]
   }
 
-  429 - Rate Limiting
+  Route-level guards (e.g., price range, missing author) still return status 400 but swap in their own error, e.g.
+  "Price must be between $0.01 and $1.00".
+
+  429 – Rate limiting / spam prevention
+
+  - Wallet rate limits:
+
+    {
+      "success": false,
+      "error": "Rate limit exceeded",
+      "message": "Maximum 5 articles per hour allowed"
+    }
+    (Daily throttle uses "Daily limit exceeded" with "Maximum 20 articles per day allowed".)
+
+  - Spam quality checks:
+
+    {
+      "success": false,
+      "error": "Spam Detected",
+      "message": "Content contains too many similar phrases"
+    }
+
+    Other reasons come through the same shape: "Content must contain at least 30 unique words", "Content appears to
+    contain gibberish...", "Please wait a minute between article submissions" (rapid), "Duplicate content detected".
+
+  403 – Unauthorized
+  When a caller edits/deletes someone else’s article:
+
   {
     "success": false,
-    "error": "Rate limit exceeded",
-    "message": "Maximum 5 articles per hour allowed"
+    "error": "Unauthorized: You can only delete your own articles"
   }
 
-  429 - Spam Prevention
-  {
-    "success": false,
-    "error": "Excessive repetition detected",
-    "message": "Content contains too many repeated words..."
-  }
-  - Other spam: "Duplicate content detected", "Rapid submission detected"
+  (Same string for update: “Unauthorized: You can only edit your own articles”.)
 
-  403 - Unauthorized
-  {
-    "success": false,
-    "error": "Unauthorized"
-  }
-  - Used for: Edit/delete article by non-author
+  404 – Not found
 
-  404 - Not Found
   {
     "success": false,
     "error": "Article not found"
   }
 
-  500 - Server Error
-  {
-    "success": false,
-    "error": "Internal server error"
-  }
+  500 – Server errors
+  We return route-specific copy:
+
+  - Create: "error": "Failed to create article"
+  - Update: "error": "Failed to update article"
+  - Delete: "error": "Failed to delete article"
+  - Fetch author/article: "Failed to fetch author" / "Failed to fetch article"
 
   ---
-  Missing/Inconsistent Feedback (Gaps to Fix)
 
-  ❌ Auto-save: No visual indicator (only console logs)❌ Draft load: No error handling if drafts fail to load❌ Draft 
-  delete: No confirmation modal (silent delete)❌ Image upload: No progress indicator or error messages❌ Like button: No
-  feedback when like/unlike fails❌ Network offline: No "you're offline" message❌ Wallet disconnect: No feedback when
-  wallet disconnects mid-session
 
-  ---
-  Summary by Type
 
-  | Type                  | Count | Locations                             |
-  |-----------------------|-------|---------------------------------------|
-  | Error boxes (red)     | 4     | Write (2), Dashboard (1), Article (1) |
-  | Success boxes (green) | 1     | Write                                 |
-  | Validation errors     | 1     | Write                                 |
-  | Modals                | 2     | Dashboard (delete), Article (tip)     |
-  | Loading states        | 5     | All pages                             |
-  | Empty states          | 2     | Dashboard, Explore                    |
-  | Toasts                | 1     | Article (payment)                     |
-  | Button state changes  | 2     | Write (draft save), Article (payment) |
-  | Inline errors         | 2     | Write (categories), Article (payment) |

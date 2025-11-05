@@ -60,6 +60,7 @@ function Write() {
   const [lastAutoSaveAt, setLastAutoSaveAt] = useState<Date | null>(null);
   const typingTimeoutRef = useRef<number | null>(null);
   const autoSaveTimeoutRef = useRef<number | null>(null);
+  const suppressSubmitClearRef = useRef<boolean>(false);
   
   // Typing animation state
   const [displayText, setDisplayText] = useState<string>('');
@@ -68,10 +69,12 @@ function Write() {
 
   const clearSubmitError = () => {
     if (submitError) {
+      console.log('[write] Clearing submit error state');
       setSubmitError('');
     }
 
-    if (submitSuccess) {
+    if (submitSuccess && !suppressSubmitClearRef.current) {
+      console.log('[write] Clearing submit success state (suppress active?', suppressSubmitClearRef.current, ')');
       setSubmitSuccess(false);
     }
   };
@@ -264,8 +267,7 @@ function Write() {
       const response = await apiService.createArticle(articleData);
 
       if (response.success) {
-        setSubmitSuccess(true);
-
+        suppressSubmitClearRef.current = true;
         // Clean up drafts that match the published article
         try {
           const matchingDrafts = availableDrafts.filter(draft =>
@@ -293,6 +295,12 @@ function Write() {
         setSelectedCategories([]);
         setShowValidationSummary(false);
         setSubmitError('');
+        setSubmitSuccess(true);
+        console.log('[write] submitSuccess set to true');
+        window.setTimeout(() => {
+          console.log('[write] Releasing submit success suppression flag');
+          suppressSubmitClearRef.current = false;
+        }, 250);
       } else {
         // Handle backend validation errors with details
         const errorMessage = response.error || 'Failed to create article';
@@ -905,6 +913,7 @@ function Write() {
                   apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
                   value={content}
                   onEditorChange={(content) => {
+                    console.log('[write] Editor change detected. suppress?', suppressSubmitClearRef.current);
                     setContent(content);
                     clearSubmitError();
                   }}

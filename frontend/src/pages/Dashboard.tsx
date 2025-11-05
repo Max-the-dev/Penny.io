@@ -43,7 +43,8 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; article: Article | null }>({ show: false, article: null });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [articleError, setArticleError] = useState<string>('');
+  const [authorError, setAuthorError] = useState<string>('');
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,7 +69,7 @@ function Dashboard() {
     if (!address) return;
     
     setLoading(true);
-    setError('');
+    setArticleError('');
     
     try {
       const response = await apiService.getArticles({ 
@@ -80,11 +81,21 @@ function Dashboard() {
       
       if (response.success && response.data) {
         setArticles(response.data);
+        setArticleError('');
       } else {
-        setError(response.error || 'Failed to fetch articles');
+        // API returned error response - show specific error
+        const friendlyError = response.error === 'Failed to fetch'
+          ? 'Failed to fetch articles'
+          : response.error;
+        setArticleError(friendlyError || 'An unexpected error occurred');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      // Network error or exception - show generic message
+      if (err instanceof Error && err.message && err.message !== 'Failed to fetch') {
+        setArticleError(err.message);
+      } else {
+        setArticleError('Failed to fetch articles');
+      }
       console.error('Error fetching articles:', err);
     } finally {
       setLoading(false);
@@ -98,8 +109,18 @@ function Dashboard() {
       const response = await apiService.getAuthor(address);
       if (response.success && response.data) {
         setAuthor(response.data);
+        setAuthorError('');
+      } else {
+        const friendlyError = response.error === 'Failed to fetch'
+          ? 'Failed to fetch author stats'
+          : response.error;
+        setAuthorError(prev => prev || friendlyError || 'Failed to fetch author stats');
       }
     } catch (err) {
+      const fallbackMessage = err instanceof Error && err.message && err.message !== 'Failed to fetch'
+        ? err.message
+        : 'Failed to fetch author stats';
+      setAuthorError(prev => prev || fallbackMessage);
       console.error('Error fetching author:', err);
     }
   };
@@ -119,10 +140,10 @@ function Dashboard() {
         fetchAuthor();
         // Show success message or notification here if needed
       } else {
-        setError(response.error || 'Failed to delete article');
+        setArticleError(response.error || 'Failed to delete article');
       }
     } catch (err) {
-      setError('An unexpected error occurred while deleting');
+      setArticleError('An unexpected error occurred while deleting');
       console.error('Error deleting article:', err);
     } finally {
       setIsDeleting(false);
@@ -177,7 +198,10 @@ function Dashboard() {
     setDateFilter('all');
     setCategoryFilter('all');
     setShowFilters(false);
+    setArticleError('');
   };
+
+  const error = articleError || authorError;
 
   if (!isConnected) {
     return (

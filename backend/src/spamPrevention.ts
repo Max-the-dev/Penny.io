@@ -162,14 +162,15 @@ function calculateSimilarity(text1: string, text2: string): number {
 export async function checkDuplicateContent(
   authorAddress: string,
   title: string,
-  content: string
+  content: string,
+  options?: { excludeArticleId?: number; similarityThreshold?: number }
 ): Promise<SpamCheckResult> {
   try {
     const normalizedAddress = normalizeAddress(authorAddress);
 
     // Get author's recent articles (last 30 days)
     const result = await pgPool.query(
-      `SELECT title, content FROM articles
+      `SELECT id, title, content FROM articles
        WHERE author_address = $1
        AND created_at > NOW() - INTERVAL '30 days'
        ORDER BY created_at DESC
@@ -181,11 +182,17 @@ export async function checkDuplicateContent(
 
     // Check similarity against each existing article
     for (const existing of existingArticles) {
+      if (options?.excludeArticleId && Number(existing.id) === options.excludeArticleId) {
+        continue;
+      }
+
+      const threshold = options?.similarityThreshold ?? SPAM_CONFIG.SIMILARITY_THRESHOLD;
+
       const titleSimilarity = calculateSimilarity(title, existing.title);
       const contentSimilarity = calculateSimilarity(content, existing.content);
 
       // If either title or content is too similar, flag as duplicate
-      if (titleSimilarity >= SPAM_CONFIG.SIMILARITY_THRESHOLD) {
+      if (titleSimilarity >= threshold) {
         return {
           isSpam: true,
           reason: 'Duplicate content detected',
@@ -193,7 +200,7 @@ export async function checkDuplicateContent(
         };
       }
 
-      if (contentSimilarity >= SPAM_CONFIG.SIMILARITY_THRESHOLD) {
+      if (contentSimilarity >= threshold) {
         return {
           isSpam: true,
           reason: 'Duplicate content detected',
@@ -236,14 +243,17 @@ export function checkContentQuality(content: string): SpamCheckResult {
   }
 
   // Check 2: Excessive repetition
-  const repetitionRatio = 1 - (uniqueWords.size / words.length);
+  const totalWordCount = words.length;
+  if (totalWordCount > 0) {
+    const repetitionRatio = 1 - (uniqueWords.size / totalWordCount);
 
-  if (repetitionRatio > SPAM_CONFIG.MAX_REPETITION_RATIO) {
-    return {
-      isSpam: true,
-      reason: 'Spam Detected',
-      details: 'Content contains too many similar phrases'
-    };
+    if (repetitionRatio > SPAM_CONFIG.MAX_REPETITION_RATIO) {
+      return {
+        isSpam: true,
+        reason: 'Spam Detected',
+        details: 'Content contains too many similar phrases'
+      };
+    }
   }
 
   // Check 3: Detect gibberish (too many words without vowels)
@@ -251,14 +261,16 @@ export function checkContentQuality(content: string): SpamCheckResult {
     word => word.length > 3 && !/[aeiou]/i.test(word)
   );
 
-  const gibberishRatio = wordsWithoutVowels.length / uniqueWords.size;
+  if (uniqueWords.size > 0) {
+    const gibberishRatio = wordsWithoutVowels.length / uniqueWords.size;
 
-  if (gibberishRatio > 0.3) {
-    return {
-      isSpam: true,
-      reason: 'Spam Detected',
-      details: 'Content appears to contain gibberish or invalid text'
-    };
+    if (gibberishRatio > 0.3) {
+      return {
+        isSpam: true,
+        reason: 'Spam Detected',
+        details: 'Content appears to contain gibberish or invalid text'
+      };
+    }
   }
 
   return { isSpam: false };

@@ -16,11 +16,12 @@ import {
   likeRequestSchema,
   deleteRequestSchema
 } from './validation';
-import { checkForSpam } from './spamPrevention';
+import { checkForSpam, checkContentQuality } from './spamPrevention';
 import { facilitator as defaultFacilitator, createFacilitatorConfig } from '@coinbase/x402';
 import { useFacilitator } from 'x402/verify';
 import { PaymentPayload, PaymentPayloadSchema, PaymentRequirements } from 'x402/types';
 import { normalizeAddress, tryNormalizeAddress } from './utils/address';
+import { error } from 'console';
 
 const router = express.Router();
 const db = new Database();
@@ -727,6 +728,19 @@ router.put('/articles/:id', writeLimiter, validate(updateArticleSchema), async (
         error: 'Unauthorized: You can only edit your own articles'
       };
       return res.status(403).json(response);
+    }
+
+    const contentChanged = existingArticle.content !== content;
+    if (contentChanged) {
+      const qualityCheck = checkContentQuality(content);
+      if (qualityCheck.isSpam) {
+        const response: ApiResponse<null> = {
+          success: false,
+          error: qualityCheck.reason || 'Content blocked by spam filter',
+          message: qualityCheck.details
+        };
+        return res.json(response);
+      }
     }
 
     // Generate new preview and read time
