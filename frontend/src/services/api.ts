@@ -36,6 +36,7 @@ export interface CreateArticleRequest {
   price: number;
   authorAddress: string;
   categories: string[];
+  draftId?: number;
 }
 
 export interface ApiResponse<T> {
@@ -54,6 +55,7 @@ export interface Draft {
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
+  isAutoSave: boolean;
 }
 
 export interface CreateDraftRequest {
@@ -196,10 +198,14 @@ class ApiService {
   }
 
   // Draft endpoints
-  async saveDraft(draft: CreateDraftRequest): Promise<ApiResponse<Draft>> {
+  async saveDraft(
+    draft: CreateDraftRequest,
+    options: { signal?: AbortSignal } = {}
+  ): Promise<ApiResponse<Draft>> {
     return this.request<Draft>('/drafts', {
       method: 'POST',
       body: JSON.stringify(draft),
+      signal: options.signal,
     });
   }
 

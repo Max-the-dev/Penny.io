@@ -77,7 +77,11 @@ export const createArticleSchema = z.object({
   categories: z.array(categorySchema)
     .max(5, 'Maximum 5 categories allowed')
     .optional()
-    .default([])
+    .default([]),
+  draftId: z.number()
+    .int('Draft id must be an integer')
+    .positive('Draft id must be positive')
+    .optional()
 });
 
 /**

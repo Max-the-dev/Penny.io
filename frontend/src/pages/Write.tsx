@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Save, Send, FileText, Clock, Eye, CheckCircle, X, AlertTriangle, Loader2, Check, Dot } from 'lucide-react';
 import { apiService, Draft, CreateArticleRequest } from '../services/api';
 import { Editor } from '@tinymce/tinymce-react';
+import { extractPlainText } from '../utils/htmlUtils';
 
 function Write() {
   const { isConnected, address } = useWallet();
@@ -50,7 +51,7 @@ function Write() {
   const [loadingDrafts, setLoadingDrafts] = useState<boolean>(false);
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState<boolean>(false);
-  
+  const [activeDraftId, setActiveDraftId] = useState<number | null>(null);
   // Content limits
   const MAX_TITLE_LENGTH = 200;
   const MIN_CONTENT_LENGTH = 50;
@@ -65,7 +66,30 @@ function Write() {
   const suppressSubmitClearRef = useRef<boolean>(false);
   const autoLoadKeyRef = useRef<string | null>(null);
   const handleSubmitRef = useRef<(event: FormEvent<HTMLFormElement>) => void | Promise<void>>();
-  
+  const autoSaveControllerRef = useRef<AbortController | null>(null);
+
+  const clearAutoSaveTimers = useCallback(() => {
+    if (typingTimeoutRef.current !== null) {
+      window.clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (autoSaveTimeoutRef.current !== null) {
+      window.clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+    if (autoSaveControllerRef.current) {
+      autoSaveControllerRef.current.abort();
+      autoSaveControllerRef.current = null;
+    }
+  }, []);
+
+  const upsertDraftInState = (draft: Draft) => {
+    setAvailableDrafts(prev => {
+      const others = prev.filter(existing => existing.id !== draft.id);
+      return [draft, ...others];
+    });
+  };
+
   // Typing animation state
   const [displayText, setDisplayText] = useState<string>('');
   const [hasTyped, setHasTyped] = useState<boolean>(false);
@@ -112,26 +136,19 @@ function Write() {
 
   // Auto-save functionality
   useEffect(() => {
-    if (!address || (!title && !content)) {
+    if (isSubmitting) {
+      clearAutoSaveTimers();
       setIsTyping(false);
-      if (typingTimeoutRef.current) {
-        window.clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-      if (autoSaveTimeoutRef.current) {
-        window.clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-      }
       return;
     }
 
-    if (typingTimeoutRef.current) {
-      window.clearTimeout(typingTimeoutRef.current);
-    }
-    if (autoSaveTimeoutRef.current) {
-      window.clearTimeout(autoSaveTimeoutRef.current);
+    if (!address || (!title && !content)) {
+      setIsTyping(false);
+      clearAutoSaveTimers();
+      return;
     }
 
+    clearAutoSaveTimers();
     setIsTyping(true);
 
     typingTimeoutRef.current = window.setTimeout(() => {
@@ -145,34 +162,39 @@ function Write() {
     autoSaveTimeoutRef.current = window.setTimeout(async () => {
       setIsAutoSaving(true);
       try {
+        autoSaveControllerRef.current?.abort();
+        const controller = new AbortController();
+        autoSaveControllerRef.current = controller;
         const now = new Date();
-        await apiService.saveDraft({
+        const response = await apiService.saveDraft({
           title,
           content,
           price: parseFloat(price) || 0.05,
           authorAddress: address,
           isAutoSave: true
-        });
+        }, { signal: controller.signal });
+        if (response.success && response.data) {
+          setActiveDraftId(response.data.id);
+          upsertDraftInState(response.data);
+        }
         setLastAutoSaveAt(now);
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        if ((error as any)?.name === 'AbortError') {
+          console.log('Auto-save request aborted');
+        } else {
+          console.error('Auto-save failed:', error);
+        }
       } finally {
+        autoSaveControllerRef.current = null;
         setIsAutoSaving(false);
         autoSaveTimeoutRef.current = null;
       }
     }, 5000);
 
     return () => {
-      if (typingTimeoutRef.current) {
-        window.clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-      if (autoSaveTimeoutRef.current) {
-        window.clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-      }
+      clearAutoSaveTimers();
     };
-  }, [title, content, price, address, isAutoSaving]);
+  }, [title, content, price, address, isAutoSaving, isSubmitting, clearAutoSaveTimers]);
 
   // Load available drafts when connected
   useEffect(() => {
@@ -218,6 +240,7 @@ function Write() {
       price: priceValue,
       authorAddress: address!,
       categories: selectedCategories,
+      draftId: activeDraftId ?? undefined,
     };
 
     try {
@@ -251,9 +274,11 @@ function Write() {
   }, [handleSubmit]);
 
   const handlePublishConfirm = async () => {
+    clearAutoSaveTimers();
     setIsSubmitting(true);
     setSubmitSuccess(false);
     setShowPublishConfirm(false);
+    const draftIdToClear = activeDraftId;
 
     try {
       const priceValue = parseFloat(price);
@@ -269,32 +294,18 @@ function Write() {
         content,
         price: priceValue,
         authorAddress: address!,
-        categories: selectedCategories
+        categories: selectedCategories,
+        draftId: activeDraftId ?? undefined
       };
 
       const response = await apiService.createArticle(articleData);
 
       if (response.success) {
         suppressSubmitClearRef.current = true;
-        // Clean up drafts that match the published article
-        try {
-          const matchingDrafts = availableDrafts.filter(draft =>
-            draft.title.trim() === title.trim() &&
-            draft.content.trim() === content.trim()
-          );
-
-          for (const draft of matchingDrafts) {
-            await apiService.deleteDraft(draft.id, address!);
-          }
-
-          // Update local drafts state to remove deleted drafts
-          setAvailableDrafts(prev => prev.filter(draft =>
-            !matchingDrafts.some(matchingDraft => matchingDraft.id === draft.id)
-          ));
-        } catch (error) {
-          console.error('Error cleaning up matching drafts:', error);
-          // Don't fail the publication if draft cleanup fails
+        if (draftIdToClear !== null) {
+          setAvailableDrafts(prev => prev.filter(d => d.id !== draftIdToClear));
         }
+        setActiveDraftId(null);
 
         // Clear current form
         setTitle('');
@@ -304,6 +315,9 @@ function Write() {
         setShowValidationSummary(false);
         setSubmitError('');
         setSubmitSuccess(true);
+        setLastAutoSaveAt(null);
+        setIsTyping(false);
+        await loadDrafts();
         console.log('[write] submitSuccess set to true');
         window.setTimeout(() => {
           console.log('[write] Releasing submit success suppression flag');
@@ -347,17 +361,13 @@ function Write() {
     }
   };
 
-  const generatePreview = (content: string) => {
-    // Remove HTML tags for preview
-    const textContent = content.replace(/<[^>]*>/g, '');
-    return textContent.substring(0, 300) + (textContent.length > 300 ? '...' : '');
-  };
+  const generatePreview = (content: string) => extractPlainText(content, 300);
 
   const estimateReadTime = (content: string) => {
     const wordsPerMinute = 200;
-    const textContent = content.replace(/<[^>]*>/g, '');
-    const wordCount = textContent.trim().split(/\s+/).length;
-    const minutes = Math.ceil(wordCount / wordsPerMinute);
+    const textContent = extractPlainText(content);
+    const wordCount = textContent.split(/\s+/).filter(Boolean).length;
+    const minutes = Math.max(1, Math.ceil(wordCount / wordsPerMinute));
     return `${minutes} min read`;
   };
 
@@ -416,7 +426,9 @@ function Write() {
         isAutoSave: false
       });
 
-      if (response.success) {
+      if (response.success && response.data) {
+        setActiveDraftId(response.data.id);
+        upsertDraftInState(response.data);
         console.log('Draft saved successfully');
         setTimeout(() => setIsDraft(false), 2000);
       } else {
@@ -455,6 +467,7 @@ function Write() {
     setContent(draft.content);
     setPrice(draft.price.toString());
     setShowDrafts(false);
+    setActiveDraftId(draft.id);
     clearSubmitError();
     console.log('Loaded draft:', draft);
   };
@@ -466,6 +479,9 @@ function Write() {
       const response = await apiService.deleteDraft(draftId, address);
       if (response.success) {
         setAvailableDrafts(prev => prev.filter(d => d.id !== draftId));
+        if (activeDraftId === draftId) {
+          setActiveDraftId(null);
+        }
       }
     } catch (error) {
       console.error('Error deleting draft:', error);
@@ -729,17 +745,20 @@ function Write() {
                   ) : (
                     availableDrafts.map((draft) => (
                       <div key={draft.id} className="draft-item">
-                        <div className="draft-info">
-                          <h4>{draft.title || 'Untitled Draft'}</h4>
-                          <p className="draft-preview">
-                            {draft.content ? draft.content.substring(0, 100) + '...' : 'No content'}
-                          </p>
-                          <div className="draft-meta">
-                            <span className="draft-date">
-                              <Clock size={14} />
-                              {new Date(draft.updatedAt).toLocaleDateString()}
-                            </span>
-                            <span className="draft-price">${draft.price.toFixed(2)}</span>
+                      <div className="draft-info">
+                        <h4>{draft.title || 'Untitled Draft'}</h4>
+                        <p className="draft-preview">
+                          {extractPlainText(draft.content, 100, 'No content yet')}
+                        </p>
+                        <div className="draft-meta">
+                          <span className={`draft-pill ${draft.isAutoSave ? 'auto' : 'manual'}`}>
+                            {draft.isAutoSave ? 'Auto-save' : 'Manual save'}
+                          </span>
+                          <span className="draft-date">
+                            <Clock size={14} />
+                            {new Date(draft.updatedAt).toLocaleDateString()}
+                          </span>
+                          <span className="draft-price">${draft.price.toFixed(2)}</span>
                           </div>
                         </div>
                         <div className="draft-actions">
@@ -787,7 +806,9 @@ function Write() {
                         <span>•</span>
                         <span className="preview-read-time">{estimateReadTime(content)}</span>
                         <span>•</span>
-                        <span className="preview-word-count">{content.trim().split(/\s+/).filter(word => word.length > 0).length} words</span>
+                        <span className="preview-word-count">
+                          {extractPlainText(content).split(/\s+/).filter(Boolean).length} words
+                        </span>
                       </div>
                     </div>
                     <div className="preview-body">

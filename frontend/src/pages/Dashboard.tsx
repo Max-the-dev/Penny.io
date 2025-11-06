@@ -4,7 +4,8 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Link, useNavigate } from 'react-router-dom';
 import { DollarSign, Eye, Users, Edit3, LayoutDashboard, Search, Filter, X, Book, Trash2, Edit, FileText, Clock } from 'lucide-react';
 import { isDateWithinRange, getRelativeTimeString } from '../utils/dateUtils';
-import { apiService, Article, Author, Draft } from '../services/api';
+import { extractPlainText } from '../utils/htmlUtils';
+import { apiService, Article, Author, Draft, CreateArticleRequest } from '../services/api';
 
 
 function Dashboard() {
@@ -50,7 +51,10 @@ function Dashboard() {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [draftsError, setDraftsError] = useState('');
-  const [draftDeleteId, setDraftDeleteId] = useState<number | null>(null);
+  const [draftConfirmDelete, setDraftConfirmDelete] = useState<Draft | null>(null);
+  const [draftConfirmPublish, setDraftConfirmPublish] = useState<Draft | null>(null);
+  const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+  const [isPublishingDraft, setIsPublishingDraft] = useState(false);
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -164,7 +168,8 @@ function Dashboard() {
   const closeDraftsModal = () => {
     setShowDraftsModal(false);
     setDraftsError('');
-    setDraftDeleteId(null);
+    setDraftConfirmDelete(null);
+    setDraftConfirmPublish(null);
   };
 
   const handleDraftEdit = (draft: Draft) => {
@@ -173,24 +178,29 @@ function Dashboard() {
   };
 
   const handleDraftPublish = (draft: Draft) => {
-    setShowDraftsModal(false);
-    navigate(`/write?draftId=${draft.id}&action=publish`);
+    setDraftsError('');
+    setDraftConfirmPublish(draft);
   };
 
   const handleDraftDelete = async (draft: Draft) => {
     if (!address) return;
 
-    setDraftDeleteId(draft.id);
+    setDraftsError('');
+    setDraftConfirmDelete(draft);
+  };
+
+  const getDraftPreview = (html: string) => extractPlainText(html, 120, 'No content yet');
+
+  const handleConfirmDraftDelete = async () => {
+    if (!address || !draftConfirmDelete) return;
+
+    setIsDeletingDraft(true);
     try {
-      const response = await apiService.deleteDraft(draft.id, address);
+      const response = await apiService.deleteDraft(draftConfirmDelete.id, address);
       if (response.success) {
-        setDrafts(prev => {
-          const next = prev.filter(d => d.id !== draft.id);
-          if (next.length === 0) {
-            setDraftsError('');
-          }
-          return next;
-        });
+        setDrafts(prev => prev.filter(d => d.id !== draftConfirmDelete.id));
+        setDraftsError('');
+        setDraftConfirmDelete(null);
       } else {
         setDraftsError(response.error || 'Failed to delete draft');
       }
@@ -199,15 +209,62 @@ function Dashboard() {
       setDraftsError(message);
       console.error('Error deleting draft:', err);
     } finally {
-      setDraftDeleteId(null);
+      setIsDeletingDraft(false);
     }
   };
 
-  const getDraftPreview = (html: string) => {
-    if (!html) return 'No content yet';
-    const text = html.replace(/<[^>]+>/g, '').trim().replace(/\s+/g, ' ');
-    if (!text) return 'No content yet';
-    return text.length > 120 ? `${text.slice(0, 120)}…` : text;
+  const publishDraft = async () => {
+    if (!address || !draftConfirmPublish) return;
+
+    setIsPublishingDraft(true);
+    setDraftsError('');
+
+    const draft = draftConfirmPublish;
+    const articlePayload: CreateArticleRequest = {
+      title: draft.title || '',
+      content: draft.content || '',
+      price: draft.price || 0,
+      authorAddress: address,
+      categories: [],
+      draftId: draft.id,
+    };
+
+    try {
+      const validationResponse = await apiService.validateArticle(articlePayload);
+      if (!validationResponse.success) {
+        const combined = [validationResponse.error, validationResponse.message]
+          .filter(Boolean)
+          .join('\n');
+        setDraftsError(combined || 'Draft failed validation');
+        setDraftConfirmPublish(null);
+        return;
+      }
+
+      const publishResponse = await apiService.createArticle(articlePayload);
+      if (publishResponse.success) {
+        setDrafts(prev => prev.filter(d => d.id !== draft.id));
+        setDraftConfirmPublish(null);
+        fetchArticles();
+        fetchAuthor();
+      } else {
+        const message = publishResponse.error || 'Failed to publish draft';
+        const details = (publishResponse as any).details;
+        if (details && Array.isArray(details)) {
+          const formatted = details.map((d: any) => `${d.field}: ${d.message}`).join('\n');
+          setDraftsError(`${message}\n${formatted}`);
+        } else {
+          setDraftsError(message);
+        }
+        setDraftConfirmPublish(null);
+      }
+    } catch (err) {
+      console.error('Error publishing draft:', err);
+      const message = err instanceof Error && err.message ? err.message : 'Failed to publish draft';
+      setDraftsError(message);
+      setDraftConfirmPublish(null);
+    } finally {
+      setIsPublishingDraft(false);
+    }
   };
 
   // Delete article handler
@@ -510,7 +567,7 @@ function Dashboard() {
                     <Link to={`/article/${article.id}`} className="article-title-link">
                       <div className="article-title">{article.title}</div>
                     </Link>
-                    <div className="article-meta">{article.readTime} read</div>
+                    <div className="article-meta">{article.readTime}</div>
                   </div>
                   <div className="table-cell">
                     <div className="date-info">
@@ -603,6 +660,9 @@ function Dashboard() {
                         <h4>{draft.title || 'Untitled Draft'}</h4>
                         <p className="drafts-item-preview">{getDraftPreview(draft.content)}</p>
                         <div className="drafts-item-meta">
+                          <span className={`draft-pill ${draft.isAutoSave ? 'auto' : 'manual'}`}>
+                            {draft.isAutoSave ? 'Auto-save' : 'Manual save'}
+                          </span>
                           <span className="drafts-item-meta-entry">
                             <Clock size={14} />
                             Updated {getRelativeTimeString(draft.updatedAt)}
@@ -615,31 +675,85 @@ function Dashboard() {
                       <div className="drafts-item-actions">
                         <button
                           type="button"
-                          className="drafts-action edit"
+                          className="action-btn save-btn"
                           onClick={() => handleDraftEdit(draft)}
+                          disabled={isPublishingDraft || isDeletingDraft}
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          className="drafts-action publish"
+                          className="action-btn publish-btn"
                           onClick={() => handleDraftPublish(draft)}
+                          disabled={isPublishingDraft}
                         >
-                          Publish
+                          {isPublishingDraft && draftConfirmPublish?.id === draft.id ? 'Publishing…' : 'Publish'}
                         </button>
                         <button
                           type="button"
-                          className="drafts-action delete"
+                          className="action-btn danger-btn"
                           onClick={() => handleDraftDelete(draft)}
-                          disabled={draftDeleteId === draft.id}
+                          disabled={isDeletingDraft && draftConfirmDelete?.id === draft.id}
                         >
-                          {draftDeleteId === draft.id ? 'Deleting…' : 'Delete'}
+                          {isDeletingDraft && draftConfirmDelete?.id === draft.id ? 'Deleting…' : 'Delete'}
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {draftConfirmDelete && (
+        <div className="modal-overlay">
+          <div className="confirm-modal">
+            <h3>Delete Draft</h3>
+            <p>Are you sure you want to delete "<strong>{draftConfirmDelete.title || 'Untitled Draft'}</strong>"?</p>
+            <p className="warning-text">This action cannot be undone.</p>
+            <div className="modal-actions">
+              <button
+                onClick={() => setDraftConfirmDelete(null)}
+                className="secondary-btn"
+                disabled={isDeletingDraft}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDraftDelete}
+                className="delete-confirm-btn"
+                disabled={isDeletingDraft}
+              >
+                {isDeletingDraft ? 'Deleting…' : 'Delete Draft'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {draftConfirmPublish && (
+        <div className="modal-overlay">
+          <div className="confirm-modal">
+            <h3>Publish Draft</h3>
+            <p>Publish "<strong>{draftConfirmPublish.title || 'Untitled Draft'}</strong>" for your readers?</p>
+            <p className="confirm-message">We’ll run the standard validation checks before it goes live.</p>
+            <div className="modal-actions">
+              <button
+                onClick={() => setDraftConfirmPublish(null)}
+                className="secondary-btn"
+                disabled={isPublishingDraft}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={publishDraft}
+                className="action-btn publish-btn"
+                disabled={isPublishingDraft}
+              >
+                {isPublishingDraft ? 'Publishing…' : 'Publish Article'}
+              </button>
             </div>
           </div>
         </div>

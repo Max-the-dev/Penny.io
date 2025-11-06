@@ -2671,6 +2671,7 @@ main {
 
 .drafts-modal-loading,
 .drafts-modal-error,
+.drafts-modal-success,
 .drafts-modal-empty {
   display: flex;
   flex-direction: column;
@@ -2685,6 +2686,10 @@ main {
 
 .drafts-modal-error {
   color: #b91c1c;
+}
+
+.drafts-modal-success {
+  color: #15803d;
 }
 
 .drafts-modal-empty p {
@@ -2763,52 +2768,6 @@ main {
   min-width: 110px;
 }
 
-.drafts-action {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.drafts-action.edit {
-  background: #eef2ff;
-  color: #3730a3;
-}
-
-.drafts-action.edit:hover {
-  background: #e0e7ff;
-}
-
-.drafts-action.publish {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.drafts-action.publish:hover {
-  background: #bbf7d0;
-}
-
-.drafts-action.delete {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.drafts-action.delete:hover {
-  background: #fecaca;
-}
-
-.drafts-action:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 @media (max-width: 640px) {
   .drafts-item {
     flex-direction: column;
@@ -2821,9 +2780,25 @@ main {
     justify-content: flex-start;
   }
 
-  .drafts-item-actions .drafts-action {
+  .drafts-item-actions .action-btn {
     flex: 1;
   }
+}
+
+.danger-btn {
+  background: linear-gradient(135deg, #f4212e 0%, #dc1e2e 100%);
+  color: #ffffff;
+  border: 1px solid #f87171;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc1e2e 0%, #b91c1c 100%);
+  box-shadow: 0 6px 12px rgba(220, 30, 46, 0.25);
+}
+
+.danger-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .draft-item {
@@ -2872,6 +2847,30 @@ main {
   align-items: center;
   gap: 12px;
   margin-top: 8px;
+}
+
+.draft-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.draft-pill.auto {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+.draft-pill.manual {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
 }
 
 .draft-date {

@@ -34,6 +34,7 @@ export interface CreateArticleRequest {
   price: number;
   authorAddress: string;
   categories: string[];
+  draftId?: number;
 }
 
 export interface ApiResponse<T> {
@@ -52,6 +53,7 @@ export interface Draft {
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
+  isAutoSave: boolean;
 }
 
 export interface CreateDraftRequest {
@@ -59,6 +61,7 @@ export interface CreateDraftRequest {
   content: string;
   price: number;
   authorAddress: string;
+  isAutoSave?: boolean;
 }
 
 export interface GetArticlesQuery {

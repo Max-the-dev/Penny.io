@@ -73,6 +73,7 @@ class Database {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       expiresAt: row.expires_at,
+      isAutoSave: !!row.is_auto_save,
     };
   }
 
@@ -435,6 +436,7 @@ class Database {
         created_at: draft.createdAt,
         updated_at: draft.updatedAt,
         expires_at: draft.expiresAt,
+        is_auto_save: draft.isAutoSave,
       })
       .select()
       .single();
@@ -454,6 +456,7 @@ class Database {
         price: draft.price,
         updated_at: draft.updatedAt,
         expires_at: draft.expiresAt,
+        is_auto_save: draft.isAutoSave,
       })
       .eq('id', draftId)
       .eq('author_address', normalizedAuthorAddress)
@@ -469,9 +472,14 @@ class Database {
   }
 
   async createOrUpdateRecentDraft(draft: Omit<Draft, 'id'>, isAutoSave: boolean = false): Promise<Draft> {
+    const draftWithFlag: Omit<Draft, 'id'> = {
+      ...draft,
+      isAutoSave,
+    };
+
     if (!isAutoSave) {
       // Manual save: always create new draft
-      return this.createDraft(draft);
+      return this.createDraft(draftWithFlag);
     }
 
     // Auto-save: check for recent draft (within 1 hour)
@@ -482,6 +490,7 @@ class Database {
       .from('drafts')
       .select('id')
       .eq('author_address', normalizedAuthorAddress)
+      .eq('is_auto_save', true)
       .gt('updated_at', oneHourAgo)
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -493,10 +502,10 @@ class Database {
 
     if (recentDraft) {
       // Update recent draft
-      return this.updateDraft(recentDraft.id, draft);
+      return this.updateDraft(recentDraft.id, draftWithFlag);
     } else {
       // Create new draft
-      return this.createDraft(draft);
+      return this.createDraft(draftWithFlag);
     }
   }
 

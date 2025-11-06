@@ -308,7 +308,7 @@ router.post('/articles/validate', writeLimiter, validate(createArticleSchema), a
 // POST /api/articles - Create new article
 router.post('/articles', writeLimiter, validate(createArticleSchema), async (req: Request, res: Response) => {
   try {
-    const { title, content, price, authorAddress, categories }: CreateArticleRequest = req.body;
+    const { title, content, price, authorAddress, categories, draftId }: CreateArticleRequest = req.body;
 
     // Validation
     if (!title || !content || !price || !authorAddress) {
@@ -366,6 +366,14 @@ router.post('/articles', writeLimiter, validate(createArticleSchema), async (req
     };
 
     const article = await db.createArticle(articleData);
+
+    if (typeof draftId === 'number') {
+      try {
+        await db.deleteDraft(draftId, authorAddress);
+      } catch (draftError) {
+        console.error('Failed to delete draft after publishing article:', draftError);
+      }
+    }
 
     // Update author statistics
     author.totalArticles += 1;
@@ -592,7 +600,8 @@ router.post('/drafts', writeLimiter, validate(createDraftSchema), async (req: Re
       authorAddress,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString()
+      expiresAt: expiresAt.toISOString(),
+      isAutoSave: !!isAutoSave,
     };
 
     const draft = await db.createOrUpdateRecentDraft(draftData, isAutoSave || false);
