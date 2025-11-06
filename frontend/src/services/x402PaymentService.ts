@@ -35,10 +35,26 @@ export interface PaymentResponse {
   rawResponse?: any;
 }
 
+type SupportedNetwork = 'base' | 'base-sepolia';
+
 class X402PaymentService {
   private facilitatorUrl = import.meta.env.VITE_X402_FACILITATOR_URL || 'https://x402.org/facilitator';
-  private network = import.meta.env.VITE_X402_NETWORK || 'base-sepolia';
+  private network = (import.meta.env.VITE_X402_NETWORK === 'base' ? 'base' : 'base-sepolia') as SupportedNetwork;
   private readonly X402_VERSION = 1;
+  private readonly apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api').replace(/\/$/, '');
+
+  private buildRequestUrl(endpoint: string, networkOverride?: SupportedNetwork): string {
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    let url = `${this.apiBase}${normalizedEndpoint}`;
+    const targetNetwork = networkOverride || this.network;
+
+    if (targetNetwork) {
+      const separator = normalizedEndpoint.includes('?') ? '&' : '?';
+      url = `${url}${separator}network=${targetNetwork}`;
+    }
+
+    return url;
+  }
 
   /**
    * Get facilitator URL - uses CDP if configured, otherwise falls back to public
@@ -65,7 +81,8 @@ class X402PaymentService {
    */
   async attemptPayment(
     endpoint: string,
-    encodedPaymentHeader?: string
+    encodedPaymentHeader?: string,
+    networkOverride?: SupportedNetwork
   ): Promise<PaymentResponse> {
     try {
       const headers: Record<string, string> = {
@@ -77,7 +94,7 @@ class X402PaymentService {
         headers['X-PAYMENT'] = encodedPaymentHeader;
       }
 
-      const response = await fetch(`http://localhost:3001/api${endpoint}`, {
+      const response = await fetch(this.buildRequestUrl(endpoint, networkOverride), {
         method: 'POST',
         headers,
       });
@@ -96,7 +113,7 @@ class X402PaymentService {
           success: false,
           paymentRequired: {
             price: priceInUsd,
-            network: paymentSpec?.network || this.network,
+            network: paymentSpec?.network || networkOverride || this.network,
             facilitator: this.getFacilitatorUrl(), // Use dynamic CDP-aware facilitator
             to: paymentSpec?.payTo || '', // Recipient from backend (article author)
             accept: paymentSpec || null,
@@ -143,11 +160,12 @@ class X402PaymentService {
    */
   async purchaseArticle(
     articleId: number,
-    walletClient: WalletClient
+    walletClient: WalletClient,
+    networkOverride?: SupportedNetwork
   ): Promise<PaymentResponse> {
     try {
       // First attempt without payment to trigger 402 response
-      const initialResponse = await this.attemptPayment(`/articles/${articleId}/purchase`);
+      const initialResponse = await this.attemptPayment(`/articles/${articleId}/purchase`, undefined, networkOverride);
 
       if (initialResponse.paymentRequired && initialResponse.paymentRequired.accept) {
         const encodedHeader = await this.createPaymentHeaderFromRequirements(
@@ -155,7 +173,7 @@ class X402PaymentService {
           walletClient
         );
 
-        const response = await fetch(`http://localhost:3001/api/articles/${articleId}/purchase`, {
+        const response = await fetch(this.buildRequestUrl(`/articles/${articleId}/purchase`, networkOverride), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

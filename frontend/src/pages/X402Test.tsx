@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAccount, useChainId, useSwitchChain, useWalletClient } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { base, baseSepolia } from 'wagmi/chains';
 import { x402PaymentService, PaymentRequirement } from '../services/x402PaymentService';
 
 const X402Test: React.FC = () => {
@@ -10,30 +10,58 @@ const X402Test: React.FC = () => {
   const { data: walletClient } = useWalletClient();
 
   const [currentPaymentReq, setCurrentPaymentReq] = useState<PaymentRequirement | null>(null);
-  const [selectedArticle, setSelectedArticle] = useState('2');
+  const [selectedArticle, setSelectedArticle] = useState('92');
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<{
     network?: string;
     paymentReq?: string;
     payment?: string;
     verification?: string;
+    verificationHtml?: string;
   }>({});
 
+  // Auto-detect network (Strategy A)
+  const isOnBase = chainId === base.id;
   const isOnBaseSepolia = chainId === baseSepolia.id;
+  const isOnCorrectNetwork = isOnBase || isOnBaseSepolia;
+  const currentNetworkName = isOnBase ? 'Base Mainnet' : isOnBaseSepolia ? 'Base Sepolia' : 'Unknown';
+  const preferredNetwork: 'base' | 'base-sepolia' = isOnBase ? 'base' : 'base-sepolia';
+
+  // Explorer URLs based on network
+  const explorerBaseUrl = isOnBase 
+    ? 'https://basescan.org' 
+    : 'https://sepolia.basescan.org';
 
   const articles = [
-    { id: '2', title: 'Building Scalable Web3 Applications', price: '$0.12' },
-    { id: '3', title: 'The effects of gravity on buttholes', price: '$0.05' },
-    { id: '4', title: 'Test article #1', price: '$0.75' },
-    { id: '5', title: 'Test article #3', price: '$0.55' },
-    { id: '6', title: 'J IS GAE - update #1', price: '$0.05' },
+    { id: '92', title: 'Test article 1', price: '$0.01' },
+    { id: '93', title: 'Test article 2', price: '$0.01' },
+    { id: '94', title: 'Test article 3', price: '$0.01' },
   ];
 
-  const switchToBaseSepolia = async () => {
+  useEffect(() => {
+    if (!testResults.network) return;
+    const timer = setTimeout(() => {
+      setTestResults(prev => {
+        const { network, ...rest } = prev;
+        return rest;
+      });
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [testResults.network]);
+
+  const switchToCorrectNetwork = async () => {
     try {
-      await switchChain({ chainId: baseSepolia.id });
-      setTestResults(prev => ({ ...prev, network: '✅ Switched to Base Sepolia successfully' }));
+      const targetChain = isOnBase ? base : baseSepolia;
+      await switchChain({ chainId: targetChain.id });
+      setTestResults(prev => ({ 
+        ...prev, 
+        network: `✅ Switched to ${targetChain.name} successfully` 
+      }));
     } catch (error: any) {
-      setTestResults(prev => ({ ...prev, network: `❌ Failed to switch: ${error.message}` }));
+      setTestResults(prev => ({ 
+        ...prev, 
+        network: `❌ Failed to switch: ${error.message}` 
+      }));
     }
   };
 
@@ -41,7 +69,11 @@ const X402Test: React.FC = () => {
     try {
       setTestResults(prev => ({ ...prev, paymentReq: '⏳ Fetching payment requirements...' }));
 
-      const response = await x402PaymentService.attemptPayment(`/articles/${selectedArticle}/purchase`);
+      const response = await x402PaymentService.attemptPayment(
+        `/articles/${selectedArticle}/purchase`,
+        undefined,
+        preferredNetwork
+      );
 
       if (response.paymentRequired) {
         setCurrentPaymentReq(response.paymentRequired);
@@ -64,17 +96,31 @@ const X402Test: React.FC = () => {
 Raw Response:
 ${prettyJson}
 
-Ready for real wallet transaction!`;
+Ready to execute transaction!`;
 
         setTestResults(prev => ({ ...prev, paymentReq: result }));
       } else if (response.success) {
-        setTestResults(prev => ({ ...prev, paymentReq: '✅ Already paid! Access granted without new authorization.' }));
+        setTestResults(prev => ({ 
+          ...prev, 
+          paymentReq: '✅ Already paid! Access granted without new authorization.' 
+        }));
       } else if (response.error) {
         setTestResults(prev => ({ ...prev, paymentReq: `❌ Error: ${response.error}` }));
       }
     } catch (error: any) {
       setTestResults(prev => ({ ...prev, paymentReq: `❌ Error: ${error.message}` }));
     }
+  };
+
+  // Format encoded header for display (wrap every 60 chars)
+  const formatEncodedHeader = (header: string | undefined): string => {
+    if (!header) return 'N/A';
+    const chunkSize = 60;
+    const chunks: string[] = [];
+    for (let i = 0; i < header.length; i += chunkSize) {
+      chunks.push(header.substring(i, i + chunkSize));
+    }
+    return chunks.join('\n  ');
   };
 
   const executePayment = async () => {
@@ -84,38 +130,71 @@ Ready for real wallet transaction!`;
     }
 
     if (!walletClient) {
-      setTestResults(prev => ({ ...prev, payment: '❌ Wallet client unavailable. Please reconnect and retry.' }));
+      setTestResults(prev => ({ 
+        ...prev, 
+        payment: '❌ Wallet client unavailable. Please reconnect and retry.' ,
+        verificationHtml: undefined
+      }));
       return;
     }
 
     try {
-      setTestResults(prev => ({ ...prev, payment: '⏳ Preparing x402 payment header...' }));
+      setTestResults(prev => ({ ...prev, payment: '⏳ Preparing x402 payment header...', verificationHtml: undefined }));
 
       const purchaseResult = await x402PaymentService.purchaseArticle(
         parseInt(selectedArticle, 10),
-        walletClient
+        walletClient,
+        preferredNetwork
       );
 
       if (purchaseResult.success) {
-        const successMsg = `🎉 REAL PAYMENT SUCCESSFUL!
+        // Extract transaction hash from backend response
+        const txHash = purchaseResult.rawResponse?.data?.transactionHash;
+        
+        // Store for verification section
+        if (txHash) {
+          setLastTxHash(txHash);
+        }
+
+        const formattedHeader = formatEncodedHeader(purchaseResult.encodedHeader);
+
+        const successMsg = `🎉 PAYMENT SUCCESSFUL!
 
 Receipt: ${purchaseResult.receipt}
-Encoded Header: ${purchaseResult.encodedHeader}
 
-✅ Payment verified and recorded
-✅ USDC payment authorized to author: ${currentPaymentReq.to}
-✅ Access granted to full content
+Encoded Header:
+  ${formattedHeader}
 
-🎊 Complete x402 micropayment with real wallets!`;
+🔧 Settling payment via CDP facilitator...
+   From: ${address}
+   To: ${currentPaymentReq.to}
+   Amount: ${currentPaymentReq.accept?.maxAmountRequired} micro USDC
+
+✅ Settlement completed successfully!
+        ${txHash ? `
+✅ Transaction Hash: ${txHash}
+` : '⚠️ Settlement succeeded but no transaction hash returned'}
+
+✅ Access to article granted.`;
 
         setTestResults(prev => ({ ...prev, payment: successMsg }));
       } else {
         const failureDetail = purchaseResult.error || 'Payment failed';
-        const raw = purchaseResult.rawResponse ? `\nResponse: ${JSON.stringify(purchaseResult.rawResponse, null, 2)}` : '';
-        setTestResults(prev => ({ ...prev, payment: `❌ Payment Failed: ${failureDetail}${raw}` }));
+        const raw = purchaseResult.rawResponse 
+          ? `\nResponse: ${JSON.stringify(purchaseResult.rawResponse, null, 2)}` 
+          : '';
+        setTestResults(prev => ({ 
+          ...prev, 
+          payment: `❌ Payment Failed: ${failureDetail}${raw}`,
+          verificationHtml: undefined 
+        }));
       }
     } catch (error: any) {
-      setTestResults(prev => ({ ...prev, payment: `❌ Payment Failed: ${error.message}` }));
+      setTestResults(prev => ({ 
+        ...prev, 
+        payment: `❌ Payment Failed: ${error.message}`,
+        verificationHtml: undefined 
+      }));
     }
   };
 
@@ -125,31 +204,68 @@ Encoded Header: ${purchaseResult.encodedHeader}
       const result = await response.json();
 
       if (result.success && result.data.hasPaid) {
-        const successMsg = `✅ PAYMENT VERIFIED!
+        const articleTitle = articles.find(a => a.id === selectedArticle)?.title || 'Unknown';
+        const articleUrl = `${window.location.origin}/articles/${selectedArticle}`;
+        const explorerUrl = lastTxHash ? `${explorerBaseUrl}/tx/${lastTxHash}` : null;
 
-Payment Status: PAID ✅
-Article ID: ${result.data.articleId}
-Your Wallet: ${result.data.userAddress}
+        const successLines = [
+          '✅ PAYMENT VERIFIED!',
+          '',
+          'Payment Status: PAID ✅',
+          `Article: ${articleTitle}`,
+          `Your Wallet: ${result.data.userAddress}`,
+          '',
+          `🔗 Verify Access: ${articleUrl}`,
+        ];
 
-🎊 You now have permanent access to this article!
-The payment has been recorded and will persist across sessions.
+        if (explorerUrl) {
+          successLines.push(`🔗 Verify Payment: ${explorerUrl}`);
+        }
 
-Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
+        successLines.push('', `Congrats on completing your first transaction on ${currentNetworkName} 🚀`);
 
-        setTestResults(prev => ({ ...prev, verification: successMsg }));
+        const successMsg = successLines.join('\n');
+        let successHtml = successMsg.replace(/\n/g, '<br />');
+        successHtml = successHtml.replace(
+          articleUrl,
+          `<a href="${articleUrl}" target="_blank" rel="noopener noreferrer">${articleUrl}</a>`
+        );
+
+        if (explorerUrl) {
+          successHtml = successHtml.replace(
+            explorerUrl,
+            `<a href="${explorerUrl}" target="_blank" rel="noopener noreferrer">${explorerUrl}</a>`
+          );
+        }
+
+        setTestResults(prev => ({ 
+          ...prev, 
+          verification: successMsg,
+          verificationHtml: successHtml 
+        }));
       } else {
-        setTestResults(prev => ({ ...prev, verification: '❌ Payment not found in system' }));
+        setTestResults(prev => ({ 
+          ...prev, 
+          verification: '❌ Payment not found in system',
+          verificationHtml: undefined 
+        }));
       }
     } catch (error: any) {
-      setTestResults(prev => ({ ...prev, verification: `❌ Error: ${error.message}` }));
+      setTestResults(prev => ({ 
+        ...prev, 
+        verification: `❌ Error: ${error.message}`,
+        verificationHtml: undefined 
+      }));
     }
   };
 
   return (
     <div className="container">
       <div className="content-wrapper">
-        <h1>🪙 x402 Payment Protocol Test</h1>
-        <p className="subtitle">Test real micropayments with your connected wallet on Base Sepolia</p>
+        <h1> See the x402 Protocol in Action </h1>
+        <p className="subtitle"> 
+          <p style={{fontSize:'10px'}}>Powered by Coinbase CDP on {currentNetworkName}</p>
+        </p>
 
         {/* Wallet Status */}
         <div className="test-section wallet-section">
@@ -158,8 +274,9 @@ Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
             <div className="success-box">
               ✅ <strong>Wallet Connected</strong><br />
               <div className="address-display">Address: {address}</div>
-              <div className={`network-indicator ${isOnBaseSepolia ? 'correct' : 'wrong'}`}>
-                Network: {isOnBaseSepolia ? 'Base Sepolia ✅' : 'Wrong Network ❌'}
+              <div className={`network-indicator ${isOnCorrectNetwork ? 'correct' : 'wrong '}`}>
+                Network: {currentNetworkName} {isOnCorrectNetwork ? '✅' : '❌'}
+                
               </div>
             </div>
           ) : (
@@ -167,18 +284,24 @@ Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
               ❌ Please connect your wallet using the Connect Wallet button in the header
             </div>
           )}
+          
         </div>
 
         {/* Network Check */}
         <div className="test-section">
           <h3>🌐 Network Verification</h3>
-          <p>Ensure you're on Base Sepolia testnet (Chain ID: {baseSepolia.id})</p>
+          <p style={{fontSize:'12px'}}>
+            Current Network: {currentNetworkName} (Chain ID: {chainId})<br />
+            Supported Networks: Base Mainnet ({base.id}) or Base Sepolia ({baseSepolia.id})
+          </p>
           <button 
-            onClick={switchToBaseSepolia}
-            disabled={!isConnected || isOnBaseSepolia}
+            onClick={switchToCorrectNetwork}
+            disabled={!isConnected || isOnCorrectNetwork}
             className="test-button"
           >
-            {isOnBaseSepolia ? 'On Base Sepolia ✅' : 'Switch to Base Sepolia'}
+            {isOnCorrectNetwork 
+              ? `On ${currentNetworkName} ✅` 
+              : `Switch to Base Network`}
           </button>
           {testResults.network && (
             <div className="result-box">{testResults.network}</div>
@@ -189,7 +312,6 @@ Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
         <div className="test-section">
           <h3>📖 Select Article to Purchase</h3>
           <div className="form-group">
-            <label htmlFor="articleSelect">Article:</label>
             <select 
               id="articleSelect" 
               value={selectedArticle} 
@@ -198,14 +320,14 @@ Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
             >
               {articles.map(article => (
                 <option key={article.id} value={article.id}>
-                  Article #{article.id} - {article.title} ({article.price})
+                  {article.title} ({article.price})
                 </option>
               ))}
             </select>
           </div>
           <button 
             onClick={getPaymentRequirements}
-            disabled={!isConnected || !isOnBaseSepolia}
+            disabled={!isConnected || !isOnCorrectNetwork}
             className="test-button"
           >
             Get Payment Requirements
@@ -217,14 +339,17 @@ Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
 
         {/* Payment Flow */}
         <div className="test-section">
-          <h3>💰 x402 Payment Flow</h3>
-          <p>This will use your real wallet to sign the payment authorization</p>
+          <h3>💰 x402 Payment Flow (CDP Settlement)</h3>
+          <p style={{fontSize:'12px'}}>
+            This will send the x402 payload (header) to your wallet for authorization.<br />
+            Once confirmed, the Coinbase x402 Facilitator will automatically settle your payment on-chain (gas-free).
+          </p>
           <button 
             onClick={executePayment}
-            disabled={!isConnected || !isOnBaseSepolia || !currentPaymentReq}
+            disabled={!isConnected || !isOnCorrectNetwork || !currentPaymentReq}
             className="test-button payment-button"
           >
-            Execute Real Payment
+            Execute Transaction
           </button>
           {testResults.payment && (
             <div className="result-box">{testResults.payment}</div>
@@ -233,17 +358,23 @@ Complete Real x402 + Base Sepolia + Real Wallets SUCCESS! 🚀`;
 
         {/* Verification */}
         <div className="test-section">
-          <h3>✅ Verify Payment & Access</h3>
+          <h3>✅ Transaction Proof</h3>
+          <p style={{fontSize:'12px'}}>Check that payment was executed on-chain and you now have access to the article.</p>
           <button 
             onClick={verifyPayment}
             disabled={!isConnected || !address}
             className="test-button"
           >
-            Verify Payment Status
+            Verify Transaction
           </button>
-          {testResults.verification && (
+          {testResults.verificationHtml ? (
+            <div
+              className="result-box"
+              dangerouslySetInnerHTML={{ __html: testResults.verificationHtml }}
+            />
+          ) : testResults.verification ? (
             <div className="result-box">{testResults.verification}</div>
-          )}
+          ) : null}
         </div>
       </div>
 

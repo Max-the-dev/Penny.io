@@ -31,6 +31,7 @@
 - Complete x402 payments production setup for testnet & mainnet
 - test page revamp 
   - test articles to purchase (platform wallet)
+    - set article price as 0.01 (1 cent)
   - actual cdp responses 
   - generate link to wallet to see transaction 
     i.e., follow this link and check for recent trasaction to [paltform wallet][0x6945890b1c074414b813c7643ae10117dec1c8e7] -> [user wallet]

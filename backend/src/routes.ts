@@ -35,6 +35,27 @@ const facilitatorConfig = process.env.COINBASE_CDP_API_KEY && process.env.COINBA
 
 const { verify: verifyWithFacilitator } = useFacilitator(facilitatorConfig);
 
+type SupportedX402Network = 'base' | 'base-sepolia';
+const DEFAULT_X402_NETWORK: SupportedX402Network =
+  process.env.X402_NETWORK === 'base' ? 'base' : 'base-sepolia';
+
+function resolveNetworkPreference(req: Request): SupportedX402Network {
+  const rawPreference = (req.query?.network ?? undefined);
+  let candidate: string | undefined;
+
+  if (typeof rawPreference === 'string') {
+    candidate = rawPreference;
+  } else if (Array.isArray(rawPreference) && typeof rawPreference[0] === 'string') {
+    candidate = rawPreference[0];
+  }
+
+  if (candidate === 'base' || candidate === 'base-sepolia') {
+    return candidate;
+  }
+
+  return DEFAULT_X402_NETWORK;
+}
+
 // ============================================
 // RATE LIMITING CONFIGURATION
 // ============================================
@@ -128,20 +149,21 @@ const upload = multer({
   }
 });
 
-function buildPaymentRequirement(article: Article, req: Request): PaymentRequirements {
+function buildPaymentRequirement(article: Article, req: Request, network: SupportedX402Network): PaymentRequirements {
   const priceInCents = Math.round(article.price * 100);
   const priceInMicroUSDC = (priceInCents * 10000).toString();
-  const network = process.env.X402_NETWORK || 'base-sepolia';
   const asset =
     network === 'base'
       ? process.env.X402_MAINNET_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
       : process.env.X402_TESTNET_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
 
+  const resourceUrl = `${req.protocol}://${req.get('host')}/api/articles/${article.id}/purchase?network=${network}`;
+
   return {
     scheme: 'exact',
     network,
     maxAmountRequired: priceInMicroUSDC,
-    resource: `${req.protocol}://${req.get('host')}/api/articles/${article.id}/purchase`,
+    resource: resourceUrl,
     description: `Purchase access to: ${article.title}`,
     mimeType: 'application/json',
     payTo: article.authorAddress,
@@ -495,7 +517,8 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req: Request, res:
       });
     }
 
-    const paymentRequirement = buildPaymentRequirement(article, req);
+    const networkPreference = resolveNetworkPreference(req);
+    const paymentRequirement = buildPaymentRequirement(article, req, networkPreference);
     const paymentHeader = req.headers['x-payment'];
 
     if (!paymentHeader) {
