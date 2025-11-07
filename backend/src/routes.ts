@@ -577,6 +577,19 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req: Request, res:
           : ''
     );
 
+    // Early check to query db if already paid for article BEFORE settlement goes out 
+    if (payerAddress) {
+      const aldreadyPaid = await checkPaymentStatus(articleId, payerAddress);
+      if (aldreadyPaid) {
+        console.log(`⚠️ Duplicate payment attempt blocked for article ${articleId} by ${payerAddress}`);
+        return res.status(409).json({
+        success: false,
+        error: 'You have already purchased this article',
+        code: 'ALREADY_PAID'
+      });
+    }
+  }
+
     // Settle authorization using CDP settle()
     const settlement = await settleAuthorization(paymentPayload, paymentRequirement);
 

@@ -9,6 +9,7 @@
     - Add trending indicators
   - Reading history and favorites for users
   - Make categories persist in drafts (Requires db schema/new routes)
+  - x402 donation
     
 ### Enhanced Article Discovery (home page):
   - "Popular Articles" section on home page
@@ -28,15 +29,8 @@
 # DEV PLAN 
 
 ## x402/payment system
-- Complete x402 payments production setup for testnet & mainnet
-- test page revamp 
-  - test articles to purchase (platform wallet)
-    - set article price as 0.01 (1 cent)
-  - actual cdp responses 
-  - generate link to wallet to see transaction 
-    i.e., follow this link and check for recent trasaction to [paltform wallet][0x6945890b1c074414b813c7643ae10117dec1c8e7] -> [user wallet]
+- Complete x402 payments production setup for mainnet
 - tip system backend integration
-- Donate button (share actual x402 address)
 
 ## Styling/cleanup
 - logo/branding

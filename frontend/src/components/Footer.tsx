@@ -10,17 +10,12 @@ function Footer() {
     {
       name: 'Ethereum (Base)',
       symbol: 'ETH / USDC',
-      address: '0xA1b2C3d4E5f67890123456789aBCdEf012345678',
+      address: '0x6945890b1c074414b813c7643ae10117dec1c8e7',
     },
     {
       name: 'Solana',
       symbol: 'SOL / USDC',
-      address: '9h8g7f6e5d4c3b2a1nM9L8K7J6H5G4F3E2D1C0B',
-    },
-    {
-      name: 'Bitcoin',
-      symbol: 'BTC',
-      address: 'bc1qsampleaddress0l1m2n3o4p5q6r7s8t9u0vwxyz',
+      address: 'cAXdcMFHK6y9yTP7AMETzXC7zvTeDBbQ5f4nvSWDx51',
     },
   ];
 
@@ -135,33 +130,37 @@ function Footer() {
               </button>
             </div>
             <p className="donation-modal-description">
-              Choose a network and copy the wallet address to send your appreciation.
+              Send your appreciation on your preffered chain.
             </p>
             <ul className="donation-list">
               {donationOptions.map(({ name, symbol, address }) => (
                 <li key={address} className="donation-item">
                   <div className="donation-info">
-                    <span className="donation-name">{name}</span>
-                    <span className="donation-symbol">{symbol}</span>
-                    <code className="donation-address">{address}</code>
+                    <div className="donation-meta">
+                      <span className="donation-name">{name}</span>
+                      <span className="donation-symbol">{symbol}</span>
+                    </div>
+                    <div className="donation-address-row">
+                      <code className="donation-address">{address}</code>
+                      <button
+                        type="button"
+                        className="donation-copy-button"
+                        onClick={() => handleCopyAddress(address)}
+                      >
+                        {copiedAddress === address ? (
+                          <>
+                            <Check size={14} />
+                            <span>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className="donation-copy-button"
-                    onClick={() => handleCopyAddress(address)}
-                  >
-                    {copiedAddress === address ? (
-                      <>
-                        <Check size={14} />
-                        <span>Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={14} />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
                 </li>
               ))}
             </ul>

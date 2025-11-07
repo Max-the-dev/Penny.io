@@ -168,13 +168,10 @@ Encoded Header:
 🔧 Settling payment via CDP facilitator...
    From: ${address}
    To: ${currentPaymentReq.to}
-   Amount: ${currentPaymentReq.accept?.maxAmountRequired} micro USDC
-
+   Amount: ${currentPaymentReq.accept?.maxAmountRequired} micro USDC ${txHash ? `
+   Transaction Hash: ${txHash}
+   ` : '⚠️ Settlement succeeded but no transaction hash returned'}
 ✅ Settlement completed successfully!
-        ${txHash ? `
-✅ Transaction Hash: ${txHash}
-` : '⚠️ Settlement succeeded but no transaction hash returned'}
-
 ✅ Access to article granted.`;
 
         setTestResults(prev => ({ ...prev, payment: successMsg }));
@@ -205,7 +202,7 @@ Encoded Header:
 
       if (result.success && result.data.hasPaid) {
         const articleTitle = articles.find(a => a.id === selectedArticle)?.title || 'Unknown';
-        const articleUrl = `${window.location.origin}/articles/${selectedArticle}`;
+        const articleUrl = `${window.location.origin}/article/${selectedArticle}`;
         const explorerUrl = lastTxHash ? `${explorerBaseUrl}/tx/${lastTxHash}` : null;
 
         const successLines = [

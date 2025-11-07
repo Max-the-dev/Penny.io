@@ -1439,8 +1439,7 @@ main {
 .donation-modal {
   background: #ffffff;
   border-radius: 16px;
-  width: 100%;
-  max-width: 420px;
+  width: min(90vw, 680px);
   box-shadow: 0 30px 60px -15px rgba(15, 23, 42, 0.35);
   animation: donationModalIn 0.28s ease;
   display: flex;
@@ -1536,9 +1535,15 @@ main {
 .donation-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
+}
+
+.donation-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .donation-name {
@@ -1552,32 +1557,42 @@ main {
   letter-spacing: 0.2px;
 }
 
+.donation-address-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
 .donation-address {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   color: #0f172a;
-  padding: 6px 8px;
+  padding: 6px 12px;
   background-color: rgba(15, 23, 42, 0.06);
-  border-radius: 6px;
-  word-break: break-all;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  display: inline-flex;
 }
 
 .donation-copy-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 4px;
+  padding: 8px 10px;
   background: #1f2937;
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.2s ease;
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 94px;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .donation-copy-button:hover {
