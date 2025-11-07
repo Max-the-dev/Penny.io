@@ -322,7 +322,7 @@ function Resources() {
                 <h3>X Community</h3>
                 <p>Join our X community to connect with other users, get help, and share feedback.</p>
               </div>
-              <a href="#" className="community-link">
+              <a href="https://x.com/i/communities/1986841883000156422" className="community-link" target='_blank' rel='noopener noreferrer'>
                 <ExternalLink size={16} />
                 X Community
               </a>
@@ -396,12 +396,12 @@ function Resources() {
             <div className="faq-items">
               <div className="faq-item">
                 <h4>What wallets are supported?</h4>
-                <p>MetaMask, Coinbase Wallet, WalletConnect, and most Ethereum-compatible wallets.</p>
+                <p>MetaMask, Coinbase Wallet, WalletConnect, Phantom, and most Ethereum-compatible wallets.</p>
               </div>
               
               <div className="faq-item">
                 <h4>How much do transactions cost?</h4>
-                <p>Network fees range from $0.001 on Polygon to $0.02 on Base. No platform fees.</p>
+                <p>Network fees are paid by the Coinbase x402 Facilitator.</p>
               </div>
               
               <div className="faq-item">

@@ -190,9 +190,10 @@ main {
 .hero-subtitle {
   font-size: 1.25rem;
   color: #536471;
-  margin: 0;
+  margin: 0 auto;
   line-height: 1.5;
   max-width: 540px;
+  text-align: center;
 }
 
 /* Typing CTA Section */
