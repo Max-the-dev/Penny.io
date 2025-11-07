@@ -3,9 +3,9 @@ import { mainnet, polygon, optimism, arbitrum, base, baseSepolia } from 'wagmi/c
 
 export const config = getDefaultConfig({
   appName: 'Penny.io',
-  projectId: 'YOUR_PROJECT_ID', // Get this from WalletConnect Cloud
+  projectId: '75c118d2-6946-46d9-b02e-32b0bad435d8',
   chains: [mainnet, polygon, optimism, arbitrum, base, baseSepolia],
-  ssr: false, // If your dApp uses server side rendering (SSR)
+  ssr: false,
 });
 
 // Note: CDP App ID configured in .env (VITE_COINBASE_CDP_APP_ID)

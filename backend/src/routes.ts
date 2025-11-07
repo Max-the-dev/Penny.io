@@ -627,6 +627,159 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req: Request, res:
   }
 });
 
+// Donate endpoint 
+// POST /api/donate - Donate to Penny.io platform
+router.post('/donate', criticalLimiter, async (req: Request, res: Response) => {
+  try {
+    const { amount } = req.body;
+    const paymentHeader = req.headers['x-payment'];
+
+    // Validate donation amount
+    if (!amount || typeof amount !== 'number' || amount < 0.01 || amount > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid donation amount. Must be between $0.10 and $1.00.'
+      });
+    }
+
+    const platformAddress = normalizeAddress('0x6945890B1c074414b813C7643aE10117dec1C8e7');
+    const amountInMicroUSDC = Math.floor(amount * 1_000_000);
+    const network = process.env.X402_NETWORK || 'base-sepolia';
+    const usdcAddress = network === 'base-sepolia'
+      ? process.env.X402_TESTNET_USDC_ADDRESS
+      : process.env.X402_MAINNET_USDC_ADDRESS;
+
+    if (!usdcAddress) {
+      return res.status(500).json({
+        success: false,
+        error: 'Payment configuration error'
+      });
+    }
+
+    const paymentRequirement: PaymentRequirements = {
+      scheme: 'exact',
+      network,
+      maxAmountRequired: amountInMicroUSDC.toString(),
+      resource: `${req.protocol}://${req.get('host')}/api/donate?network=${network}`,
+      description: `Donation to Penny.io platform - $${amount}`,
+      mimeType: 'application/json',
+      payTo: platformAddress,
+      maxTimeoutSeconds: 300,
+      asset: usdcAddress,
+      outputSchema: {
+        input: {
+          type: 'http',
+          method: 'POST',
+          discoverable: true
+        }
+      },
+      extra: {
+        name: 'USDC',
+        version: '2',
+        title: `Donate $${amount} to Penny.io`,
+        category: 'donation',
+        tags: ['donation', 'platform-support'],
+        serviceName: 'Penny.io Platform Donation',
+        serviceDescription: `Support Penny.io platform with a $${amount} donation`,
+        pricing: {
+          currency: 'USD',
+          amount: amount.toString(),
+          display: `$${amount.toFixed(2)}`
+        }
+      }
+    };
+
+    // If no payment header, return 402 with requirements
+    if (!paymentHeader) {
+      return res.status(402).json({
+        x402Version: 1,
+        error: 'Payment required',
+        price: `$${amount.toFixed(2)}`,
+        accepts: [paymentRequirement]
+      });
+    }
+
+    // Payment header provided - verify it
+    console.log(`💰 Processing donation of $${amount} to platform`);
+
+    let paymentPayload: PaymentPayload;
+    try {
+      const decoded = Buffer.from(paymentHeader as string, 'base64').toString('utf8');
+      paymentPayload = PaymentPayloadSchema.parse(JSON.parse(decoded));
+    } catch (error) {
+      console.error('Invalid x402 payment header:', error);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid x402 payment header'
+      });
+    }
+
+    console.log('🔍 Verifying donation payment with CDP facilitator...');
+    const verification = await verifyWithFacilitator(paymentPayload, paymentRequirement);
+    
+    if (!verification.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment verification failed',
+        details: verification.invalidReason
+      });
+    }
+
+    const paymentRecipient = normalizeAddress(paymentPayload.payload.authorization.to);
+    if (paymentRecipient !== platformAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment recipient mismatch'
+      });
+    }
+
+    const payerAddress =
+      tryNormalizeAddress(verification.payer) ||
+      tryNormalizeAddress(
+        typeof paymentPayload.payload.authorization.from === 'string'
+          ? paymentPayload.payload.authorization.from
+          : ''
+      );
+
+    console.log('🔧 Settling donation via CDP facilitator...');
+    const settlement = await settleAuthorization(paymentPayload, paymentRequirement);
+
+    if ('error' in settlement) {
+      console.error('❌ Donation settlement failed:', settlement.error);
+      return res.status(500).json({
+        success: false,
+        error: 'Donation settlement failed. Please try again.',
+        details: settlement.error
+      });
+    }
+
+    const txHash = settlement.txHash;
+
+    console.log(`✅ Donation successful: $${amount} from ${payerAddress || 'unknown'}`);
+    if (txHash) {
+      console.log(`   Transaction: ${txHash}`);
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        message: 'Thank you for your donation!',
+        receipt: `donation-${Date.now()}`,
+        amount,
+        transactionHash: txHash
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Donation processing error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process donation'
+    });
+  }
+});
+
+
 // Draft Routes
 
 // POST /api/drafts - Create or update draft
