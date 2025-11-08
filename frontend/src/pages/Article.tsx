@@ -401,7 +401,7 @@ function Article() {
                     {tipOptions.map((amount) => (
                       <button
                         key={amount}
-                        className={`tip-option ${tipAmount === amount ? 'selected' : ''}`}
+                        className={`tip-option ${selectedTipAmount === amount ? 'selected' : ''}`}
                         onClick={() => {
                           setSelectedTipAmount(amount);
                           setCustomTipAmount(''); // Clear custom input when preset is clicked
