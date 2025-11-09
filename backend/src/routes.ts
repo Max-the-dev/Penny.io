@@ -30,26 +30,37 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Use CDP facilitator - auto-detects CDP_API_KEY_ID and CDP_API_KEY_SECRET from env
 const { verify: verifyWithFacilitator, settle: settleWithFacilitator } = useFacilitator(facilitator);
 
-type SupportedX402Network = 'base' | 'base-sepolia';
+// Ensuring default network is registered & passed down
+type SupportedX402Network = 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
+
+const ALLOWED_DEFAULTS: SupportedX402Network[] = [
+  'base',
+  'base-sepolia',
+  'solana',
+  'solana-devnet',
+];
+
 const DEFAULT_X402_NETWORK: SupportedX402Network =
-  process.env.X402_NETWORK === 'base' ? 'base' : 'base-sepolia';
+ALLOWED_DEFAULTS.includes((process.env.X402_NETWORK || '') as SupportedX402Network)
+    ? (process.env.X402_NETWORK as SupportedX402Network)
+    : 'base-sepolia';  
+
 
 function resolveNetworkPreference(req: Request): SupportedX402Network {
-  const rawPreference = (req.query?.network ?? undefined);
-  let candidate: string | undefined;
+  const raw = req.query?.network;
+  const candidate =
+    typeof raw === 'string'
+      ? raw
+      : Array.isArray(raw) && typeof raw[0] === 'string'
+        ? raw[0]
+        : undefined;
 
-  if (typeof rawPreference === 'string') {
-    candidate = rawPreference;
-  } else if (Array.isArray(rawPreference) && typeof rawPreference[0] === 'string') {
-    candidate = rawPreference[0];
-  }
-
-  if (candidate === 'base' || candidate === 'base-sepolia') {
-    return candidate;
+  if (candidate && ALLOWED_DEFAULTS.includes(candidate as SupportedX402Network)) {
+    return candidate as SupportedX402Network;
   }
 
   return DEFAULT_X402_NETWORK;
-};
+}
 
 // ============================================
 // RATE LIMITING CONFIGURATION
@@ -144,6 +155,16 @@ const upload = multer({
   }
 });
 
+
+/**
+ * Builds actual payments requirements based on input like network, price, scheme, etc. 
+ * Covers both Solana and EVM 
+ * Check which of the author’s configured payout methods corresponds to the requested network.
+ * If it matches the article’s authorPrimaryNetwork, pay to authorAddress (which is the primary wallet, whether EVM or Solana).
+ * Else if it matches authorSecondaryNetwork, pay to authorSecondaryAddress.
+ * Otherwise, reject request 
+ * Builds paymnets requirements specifically for article purchase 
+ */
 function buildPaymentRequirement(article: Article, req: Request, network: SupportedX402Network): PaymentRequirements {
   const priceInCents = Math.round(article.price * 100);
   const priceInMicroUSDC = (priceInCents * 10000).toString();
