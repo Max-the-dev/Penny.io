@@ -184,8 +184,16 @@ function buildPaymentRequirement(article: Article, req: Request, network: Suppor
   };
 }
 
-async function ensureAuthorRecord(address: string): Promise<Author> {
-  const normalizedAddress = normalizeAddress(address);
+/**
+ * normalizes based on the hint: 
+ * Solana networks call normalizeSolanaAddress, others use normalizeAddress
+ * it stores the corresponding primaryPayoutNetwor
+ */
+async function ensureAuthorRecord(address: string, networkHint?: SupportedPayoutNetwork): Promise<Author> {
+  const isSolana = !!networkHint && SOLANA_NETWORKS.includes(networkHint);
+  const normalizedAddress = isSolana
+    ? normalizeSolanaAddress(address)
+    : normalizeAddress(address);
   const existingAuthor = await db.getAuthor(normalizedAddress);
   if (existingAuthor) {
     return existingAuthor;
@@ -194,12 +202,12 @@ async function ensureAuthorRecord(address: string): Promise<Author> {
   const now = new Date().toISOString();
   const newAuthor: Author = {
     address: normalizedAddress,
-    primaryPayoutNetwork: 'base',
+    primaryPayoutNetwork: isSolana && networkHint ? networkHint : 'base',
     createdAt: now,
     totalArticles: 0,
     totalEarnings: 0,
     totalViews: 0,
-    totalPurchases: 0
+    totalPurchases: 0,
   };
 
   await db.createOrUpdateAuthor(newAuthor);
@@ -439,9 +447,15 @@ router.post('/articles', writeLimiter, validate(createArticleSchema), async (req
 router.get('/authors/:address', readLimiter, async (req: Request, res: Response) => {
   try {
     const { address } = req.params;
-    let normalizedAddress: string;
+    const networkHint = req.query.network as SupportedPayoutNetwork | undefined;
+
+    // Basic validation: ensure the address looks like the expected network type
     try {
-      normalizedAddress = normalizeAddress(address);
+      if (networkHint && SOLANA_NETWORKS.includes(networkHint)) {
+        normalizeSolanaAddress(address);
+      } else {
+        normalizeAddress(address);
+      }
     } catch {
       const response: ApiResponse<never> = {
         success: false,
@@ -450,7 +464,7 @@ router.get('/authors/:address', readLimiter, async (req: Request, res: Response)
       return res.status(400).json(response);
     }
 
-    const author = await ensureAuthorRecord(normalizedAddress);
+    const author = await ensureAuthorRecord(address, networkHint);
 
     const response: ApiResponse<Author> = {
       success: true,
