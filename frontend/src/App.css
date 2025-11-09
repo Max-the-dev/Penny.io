@@ -563,29 +563,19 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
   font-size: 0.75rem;
 }
 
 .network-label {
   color: #8b98a5;
   font-weight: 500;
+  font-size: 0.75rem;
 }
 
-.network-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #2775ca 0%, #1e5ea8 100%);
-  color: white;
-  font-weight: 600;
-  font-size: 0.7rem;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  box-shadow: 0 2px 4px rgba(39, 117, 202, 0.2);
+.usdc-icon {
+  flex-shrink: 0;
 }
 
 .author {

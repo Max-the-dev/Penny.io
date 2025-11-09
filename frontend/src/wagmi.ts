@@ -1,7 +1,7 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { mainnet, polygon, optimism, arbitrum, base, baseSepolia } from 'wagmi/chains';
 
-export const config = getDefaultConfig({
+export const wagmiConfig = getDefaultConfig({
   appName: 'Penny.io',
   projectId: '75c118d2-6946-46d9-b02e-32b0bad435d8',
   chains: [mainnet, polygon, optimism, arbitrum, base, baseSepolia],
