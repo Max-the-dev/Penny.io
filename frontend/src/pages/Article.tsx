@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Clock, User, Lock, HeartHandshake, Tag } from 'lucide-react';
-import { apiService, Article as ArticleType } from '../services/api';
+import { apiService, Article as ArticleType, SupportedAuthorNetwork } from '../services/api';
 import { x402PaymentService } from '../services/x402PaymentService';
 import { useAccount, useWalletClient } from 'wagmi';
 import LikeButton from '../components/LikeButton';
@@ -32,6 +32,7 @@ function Article() {
   const [selectedTipAmount, setSelectedTipAmount] = useState<number | null>(null);
   const [customTipAmount, setCustomTipAmount] = useState('');
   const [tipResult, setTipResult] = useState<{ success: boolean; message: string; txHash?: string } | null>(null);
+  const [authorNetworks, setAuthorNetworks] = useState<SupportedAuthorNetwork[]>(['base']);
 
   // Dynamic chain detection to build correct payload
   const { chain } = useAccount();
@@ -41,6 +42,19 @@ function Article() {
     if (article && article.id === articleId) {
       setArticle(prev => prev ? { ...prev, likes: newLikeCount } : null);
     }
+  };
+
+  const getNetworkFamily = (network?: SupportedAuthorNetwork | 'base' | 'base-sepolia'): 'base' | 'solana' => {
+    if (!network) return 'base';
+    return network.includes('solana') ? 'solana' : 'base';
+  };
+
+  const formatSupportedNetworks = (networks: SupportedAuthorNetwork[]): string => {
+    const families = new Set(networks.map(net => getNetworkFamily(net)));
+    if (!families.size) return 'Base USDC';
+    return Array.from(families)
+      .map(family => (family === 'solana' ? 'Solana USDC' : 'Base USDC'))
+      .join(' + ');
   };
 
   // Fetch article on component mount and check payment status
@@ -55,6 +69,13 @@ function Article() {
         const response = await apiService.getArticleById(parseInt(id));
         if (response.success && response.data) {
           setArticle(response.data);
+
+          const authorInfo = await apiService.getAuthor(response.data.authorAddress);
+          if (authorInfo.success && authorInfo.data?.supportedNetworks?.length) {
+            setAuthorNetworks(
+              Array.from(new Set(authorInfo.data.supportedNetworks))
+            );
+          }
 
           // Check if user has already paid for this article
           if (address) {
@@ -127,6 +148,7 @@ function Article() {
   if (chainId === 84532) return 'base-sepolia'; // Base Sepolia
   return 'base-sepolia'; // Default to testnet for safety
   };
+  const authorNetworkLabel = formatSupportedNetworks(authorNetworks);
 
   const handlePayment = async () => {
     if (!address) {
@@ -270,7 +292,7 @@ function Article() {
             {!isAuthor && !hasPaid && (
               <div className="article-preview">
                 {article.preview.split('\n\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
+                  <p key={index} dangerouslySetInnerHTML={{__html: sanitizeHTML(paragraph)}} />
                 ))}
               </div>
             )}
@@ -281,7 +303,7 @@ function Article() {
                   <Lock size={48} />
                   <h3>Continue Reading</h3>
                   <p>Unlock the full article with a one-time payment of <strong>${article.price.toFixed(2)}</strong></p>
-                  
+
                   {!isConnected ? (
                     <div className="connect-wallet">
                       <p>Connect your wallet to continue</p>
@@ -296,6 +318,11 @@ function Article() {
                       >
                         {isProcessingPayment ? 'Processing...' : `Pay $${article.price.toFixed(2)}`}
                       </button>
+
+                      <div className="network-support-compact">
+                        <span className="network-label">Accepts:</span>
+                        <span className="network-badge">{authorNetworkLabel}</span>
+                      </div>
 
                       {paymentError && (
                         <div className="payment-error">

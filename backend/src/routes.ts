@@ -30,20 +30,23 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Use CDP facilitator - auto-detects CDP_API_KEY_ID and CDP_API_KEY_SECRET from env
 const { verify: verifyWithFacilitator, settle: settleWithFacilitator } = useFacilitator(facilitator);
 
-// Ensuring default network is registered & passed down
 type SupportedX402Network = 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
 
-const ALLOWED_DEFAULTS: SupportedX402Network[] = [
+const SUPPORTED_X402_NETWORKS: SupportedX402Network[] = [
   'base',
   'base-sepolia',
   'solana',
   'solana-devnet',
 ];
 
+const X402_EVM_NETWORKS: SupportedX402Network[] = ['base', 'base-sepolia'];
+const X402_SOLANA_NETWORKS: SupportedX402Network[] = ['solana', 'solana-devnet'];
+type NetworkGroup = 'evm' | 'solana';
+
 const DEFAULT_X402_NETWORK: SupportedX402Network =
-ALLOWED_DEFAULTS.includes((process.env.X402_NETWORK || '') as SupportedX402Network)
+  SUPPORTED_X402_NETWORKS.includes((process.env.X402_NETWORK || '') as SupportedX402Network)
     ? (process.env.X402_NETWORK as SupportedX402Network)
-    : 'base-sepolia';  
+    : 'base-sepolia';
 
 
 function resolveNetworkPreference(req: Request): SupportedX402Network {
@@ -55,7 +58,7 @@ function resolveNetworkPreference(req: Request): SupportedX402Network {
         ? raw[0]
         : undefined;
 
-  if (candidate && ALLOWED_DEFAULTS.includes(candidate as SupportedX402Network)) {
+  if (candidate && SUPPORTED_X402_NETWORKS.includes(candidate as SupportedX402Network)) {
     return candidate as SupportedX402Network;
   }
 
@@ -156,25 +159,74 @@ const upload = multer({
 });
 
 
+const SOLANA_USDC_MAINNET =
+  process.env.X402_SOLANA_MAINNET_USDC_ADDRESS ||
+  'EPjFWdd5AufqSSqeM2qE7c4wAkwcGw7Doe8kJ3e1ecp';
+const SOLANA_USDC_DEVNET =
+  process.env.X402_SOLANA_DEVNET_USDC_ADDRESS ||
+  '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+const PLATFORM_EVM_ADDRESS = normalizeAddress(
+  process.env.X402_PLATFORM_EVM_ADDRESS || '0x6945890B1c074414b813C7643aE10117dec1C8e7'
+);
+const PLATFORM_SOLANA_ADDRESS = process.env.X402_PLATFORM_SOL_ADDRESS
+  ? normalizeSolanaAddress(process.env.X402_PLATFORM_SOL_ADDRESS)
+  : null;
+
+const getNetworkGroup = (network?: SupportedX402Network | null): NetworkGroup =>
+  network && X402_SOLANA_NETWORKS.includes(network) ? 'solana' : 'evm';
+
+// Select the correct payout address for the requested network, preferring the author’s
+// primary method and falling back to the secondary slot when it matches.
+function resolvePayTo(article: Article, network: SupportedX402Network): string {
+  const targetGroup = getNetworkGroup(network);
+  const primaryNetwork = (article.authorPrimaryNetwork as SupportedX402Network) || 'base';
+  const primaryGroup = getNetworkGroup(primaryNetwork);
+
+  if (primaryGroup === targetGroup) {
+    return targetGroup === 'solana'
+      ? normalizeSolanaAddress(article.authorAddress)
+      : normalizeAddress(article.authorAddress);
+  }
+
+  if (
+    article.authorSecondaryNetwork &&
+    article.authorSecondaryAddress
+  ) {
+    const secondaryGroup = getNetworkGroup(article.authorSecondaryNetwork as SupportedX402Network);
+    if (secondaryGroup === targetGroup) {
+      return secondaryGroup === 'solana'
+        ? normalizeSolanaAddress(article.authorSecondaryAddress)
+        : normalizeAddress(article.authorSecondaryAddress);
+    }
+  }
+
+  throw new Error('AUTHOR_NETWORK_UNSUPPORTED');
+}
+
+// Choose the right USDC contract/mint for the network. Base(*) use ERC-20 addresses,
+// Solana networks use the SPL USDC mint (with env overrides if provided).
+function resolveAsset(network: SupportedX402Network): string {
+  if (network === 'base') {
+    return process.env.X402_MAINNET_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+  }
+  if (network === 'base-sepolia') {
+    return process.env.X402_TESTNET_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+  }
+  return network === 'solana' ? SOLANA_USDC_MAINNET : SOLANA_USDC_DEVNET;
+}
+
 /**
- * Builds actual payments requirements based on input like network, price, scheme, etc. 
- * Covers both Solana and EVM 
- * Check which of the author’s configured payout methods corresponds to the requested network.
- * If it matches the article’s authorPrimaryNetwork, pay to authorAddress (which is the primary wallet, whether EVM or Solana).
- * Else if it matches authorSecondaryNetwork, pay to authorSecondaryAddress.
- * Otherwise, reject request 
- * Builds paymnets requirements specifically for article purchase 
+ * Builds the PaymentRequirements object for purchases, choosing the correct payout address and asset per network.
  */
 function buildPaymentRequirement(article: Article, req: Request, network: SupportedX402Network): PaymentRequirements {
   const priceInCents = Math.round(article.price * 100);
   const priceInMicroUSDC = (priceInCents * 10000).toString();
-  const asset =
-    network === 'base'
-      ? process.env.X402_MAINNET_USDC_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-      : process.env.X402_TESTNET_USDC_ADDRESS || '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
-
   const resourceUrl = `${req.protocol}://${req.get('host')}/api/articles/${article.id}/purchase?network=${network}`;
-  
+
+  const payTo = resolvePayTo(article, network);
+  const asset = resolveAsset(network);
+  console.log(`[x402] Building requirement for article ${article.id} on ${network} → payTo ${payTo}, asset ${asset}`);
+
   return {
     scheme: 'exact',
     network,
@@ -182,20 +234,18 @@ function buildPaymentRequirement(article: Article, req: Request, network: Suppor
     resource: resourceUrl,
     description: `Purchase access to: ${article.title}`,
     mimeType: 'application/json',
-    payTo: article.authorAddress,
-    maxTimeoutSeconds: 900,  // 15min to match x402 client default
+    payTo,
+    maxTimeoutSeconds: 900,
     asset,
-    //outputSchema: { data: "string" },
-
     extra: {
-      name: network === 'base' ? 'USD Coin' : 'USDC',  // Different for mainnet,
+      name: 'USD Coin',
       version: '2',
       title: `Purchase: ${article.title}`,
       category: article.categories?.[0] || 'content',
       tags: article.categories || ['article', 'content'],
       serviceName: 'Penny.io Article Access',
       serviceDescription: `Unlock full access to "${article.title}" by ${article.authorAddress.slice(0, 6)}...${article.authorAddress.slice(-4)}`,
-      gasLimit: '1000000',  // Add this line
+      gasLimit: '1000000',
       pricing: {
         currency: 'USD Coin',
         amount: article.price.toString(),
@@ -486,10 +536,17 @@ router.get('/authors/:address', readLimiter, async (req: Request, res: Response)
     }
 
     const author = await ensureAuthorRecord(address, networkHint);
+    const supportedNetworks = [
+      author.primaryPayoutNetwork,
+      author.secondaryPayoutNetwork
+    ].filter(Boolean);
 
     const response: ApiResponse<Author> = {
       success: true,
-      data: author
+      data: {
+        ...author,
+        supportedNetworks
+      } as Author & { supportedNetworks: (SupportedX402Network | undefined)[] }
     };
 
     res.json(response);
@@ -644,7 +701,18 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req: Request, res:
     }
 
     const networkPreference = resolveNetworkPreference(req);
-    const paymentRequirement = buildPaymentRequirement(article, req, networkPreference);
+    let paymentRequirement: PaymentRequirements;
+    try {
+      paymentRequirement = buildPaymentRequirement(article, req, networkPreference);
+    } catch (error) {
+      if ((error as Error).message === 'AUTHOR_NETWORK_UNSUPPORTED') {
+        return res.status(400).json({
+          success: false,
+          error: 'Author does not accept payments on this network'
+        });
+      }
+      throw error;
+    }
     const paymentHeader = req.headers['x-payment'];
 
     if (!paymentHeader) {
@@ -775,19 +843,23 @@ router.post('/donate', criticalLimiter, async (req: Request, res: Response) => {
       });
     }
 
-    const platformAddress = normalizeAddress('0x6945890B1c074414b813C7643aE10117dec1C8e7');
     const amountInMicroUSDC = Math.floor(amount * 1_000_000);
     const networkPreference = resolveNetworkPreference(req);
-    const usdcAddress = networkPreference === 'base-sepolia'
-      ? process.env.X402_TESTNET_USDC_ADDRESS
-      : process.env.X402_MAINNET_USDC_ADDRESS;
+    const payTo =
+      networkPreference === 'solana' || networkPreference === 'solana-devnet'
+        ? PLATFORM_SOLANA_ADDRESS
+        : PLATFORM_EVM_ADDRESS;
 
-    if (!usdcAddress) {
-      return res.status(500).json({
+    if (!payTo) {
+      return res.status(400).json({
         success: false,
-        error: 'Payment configuration error'
+        error: 'Platform does not accept donations on this network'
       });
     }
+
+    const asset = resolveAsset(networkPreference);
+
+    console.log(`[x402] Donation request on ${networkPreference} → payTo ${payTo}, asset ${asset}`);
 
     const paymentRequirement: PaymentRequirements = {
       scheme: 'exact',
@@ -796,9 +868,9 @@ router.post('/donate', criticalLimiter, async (req: Request, res: Response) => {
       resource: `${req.protocol}://${req.get('host')}/api/donate?network=${networkPreference}`,
       description: `Donation to Penny.io platform - $${amount}`,
       mimeType: 'application/json',
-      payTo: platformAddress,
+      payTo,
       maxTimeoutSeconds: 900,
-      asset: usdcAddress,
+      asset,
       outputSchema: {
         input: {
           type: 'http',
@@ -858,8 +930,10 @@ router.post('/donate', criticalLimiter, async (req: Request, res: Response) => {
       });
     }
 
-    const paymentRecipient = normalizeAddress(paymentPayload.payload.authorization.to);
-    if (paymentRecipient !== platformAddress) {
+    const paymentRecipient = X402_SOLANA_NETWORKS.includes(networkPreference)
+      ? normalizeSolanaAddress(paymentPayload.payload.authorization.to)
+      : normalizeAddress(paymentPayload.payload.authorization.to);
+    if (paymentRecipient !== payTo) {
       return res.status(400).json({
         success: false,
         error: 'Payment recipient mismatch'
@@ -888,7 +962,7 @@ router.post('/donate', criticalLimiter, async (req: Request, res: Response) => {
 
     const txHash = settlement.txHash;
 
-    console.log(`✅ Donation successful: $${amount.toFixed(2)} from ${payerAddress || 'unknown'} to ${platformAddress}`);
+    console.log(`✅ Donation successful: $${amount.toFixed(2)} from ${payerAddress || 'unknown'} to ${payTo}`);
     if (txHash) {
       console.log(`   🔗 Transaction: ${txHash}`);
     }
@@ -936,19 +1010,21 @@ router.post('/articles/:id/tip', criticalLimiter, async (req: Request, res: Resp
       });
     }
 
-    const authorAddress = article.authorAddress;
     const amountInMicroUSDC = Math.floor(amount * 1_000_000);
     const networkPreference = resolveNetworkPreference(req);
-    const usdcAddress = networkPreference === 'base-sepolia'
-      ? process.env.X402_TESTNET_USDC_ADDRESS
-      : process.env.X402_MAINNET_USDC_ADDRESS;
-
-    if (!usdcAddress) {
-      return res.status(500).json({
+    let payTo: string;
+    try {
+      payTo = resolvePayTo(article, networkPreference);
+    } catch {
+      return res.status(400).json({
         success: false,
-        error: 'Payment configuration error'
+        error: 'Author does not accept tips on this network'
       });
     }
+
+    const asset = resolveAsset(networkPreference);
+
+    console.log(`[x402] Tip request for article ${articleId} on ${networkPreference} → payTo ${payTo}, asset ${asset}`);
 
     const paymentRequirement: PaymentRequirements = {
       scheme: 'exact',
@@ -957,9 +1033,9 @@ router.post('/articles/:id/tip', criticalLimiter, async (req: Request, res: Resp
       resource: `${req.protocol}://${req.get('host')}/api/articles/${articleId}/tip?network=${networkPreference}`,
       description: `Tip for article: ${article.title}`,
       mimeType: 'application/json',
-      payTo: authorAddress,
+      payTo,
       maxTimeoutSeconds: 900,
-      asset: usdcAddress,
+      asset,
       outputSchema: {
         input: {
           type: 'http',
@@ -994,7 +1070,7 @@ router.post('/articles/:id/tip', criticalLimiter, async (req: Request, res: Resp
     }
 
     // Payment header provided - verify it
-    console.log(`💰 Processing $${amount} tip for article ${articleId} to ${authorAddress}`);
+    console.log(`💰 Processing $${amount} tip for article ${articleId} to ${payTo}`);
 
     let paymentPayload: PaymentPayload;
     try {
@@ -1019,8 +1095,10 @@ router.post('/articles/:id/tip', criticalLimiter, async (req: Request, res: Resp
       });
     }
 
-    const paymentRecipient = normalizeAddress(paymentPayload.payload.authorization.to);
-    if (paymentRecipient !== authorAddress) {
+    const paymentRecipient = X402_SOLANA_NETWORKS.includes(networkPreference)
+      ? normalizeSolanaAddress(paymentPayload.payload.authorization.to)
+      : normalizeAddress(paymentPayload.payload.authorization.to);
+    if (paymentRecipient !== payTo) {
       return res.status(400).json({
         success: false,
         error: 'Payment recipient mismatch'
@@ -1049,7 +1127,7 @@ router.post('/articles/:id/tip', criticalLimiter, async (req: Request, res: Resp
 
     const txHash = settlement.txHash;
 
-    console.log(`✅ Tip successful: $${amount.toFixed(2)} from ${payerAddress || 'unknown'} to ${authorAddress}`);
+    console.log(`✅ Tip successful: $${amount.toFixed(2)} from ${payerAddress || 'unknown'} to ${payTo}`);
     if (txHash) {
       console.log(`   🔗 Transaction: ${txHash}`);
     }

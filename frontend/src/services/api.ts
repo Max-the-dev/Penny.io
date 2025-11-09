@@ -21,6 +21,8 @@ export interface Article {
   popularityScore?: number;
 }
 
+export type SupportedAuthorNetwork = 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
+
 export interface Author {
   address: string;
   createdAt: string;
@@ -28,6 +30,10 @@ export interface Author {
   totalArticles: number;
   totalViews: number;
   totalPurchases: number;
+  primaryPayoutNetwork?: SupportedAuthorNetwork;
+  secondaryPayoutNetwork?: SupportedAuthorNetwork;
+  secondaryPayoutAddress?: string;
+  supportedNetworks?: SupportedAuthorNetwork[];
 }
 
 export interface CreateArticleRequest {
