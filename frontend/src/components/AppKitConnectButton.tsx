@@ -22,21 +22,34 @@ const AppKitConnectButton = () => {
 
   useEffect(() => {
     const fetchBalance = async () => {
-      if (!isConnected || !address || !chainId) {
+      if (!isConnected || !address) {
         setUsdcBalance(null);
         return;
       }
 
+      console.log('Fetching balance for:', {
+        address,
+        chainId,
+        caipNetworkId,
+        hasEvmProvider: !!evmProvider,
+        hasSolanaProvider: !!solanaProvider
+      });
+
       try {
         // Check if it's a Solana network
         if (caipNetworkId && caipNetworkId.startsWith('solana:')) {
+          console.log('Detected Solana network:', caipNetworkId);
           const usdcMint = USDC_ADDRESSES_SOLANA[caipNetworkId as keyof typeof USDC_ADDRESSES_SOLANA];
+          console.log('USDC Mint address:', usdcMint);
+
           if (!usdcMint || !solanaProvider) {
+            console.log('Missing usdcMint or solanaProvider:', { usdcMint, hasSolanaProvider: !!solanaProvider });
             setUsdcBalance(null);
             return;
           }
 
           // Fetch Solana USDC balance using getTokenAccountsByOwner
+          console.log('Requesting Solana balance for address:', address);
           const response = await (solanaProvider as any).request({
             method: 'getTokenAccountsByOwner',
             params: [
@@ -46,11 +59,15 @@ const AppKitConnectButton = () => {
             ]
           });
 
+          console.log('Solana RPC response:', response);
+
           if (response?.value && response.value.length > 0) {
             const tokenAccount = response.value[0];
             const balance = tokenAccount.account.data.parsed.info.tokenAmount.uiAmount;
+            console.log('Solana USDC balance:', balance);
             setUsdcBalance(balance.toFixed(2));
           } else {
+            console.log('No token accounts found, setting balance to 0.00');
             setUsdcBalance('0.00');
           }
         } else {
