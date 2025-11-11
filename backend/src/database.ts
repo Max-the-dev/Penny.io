@@ -12,7 +12,7 @@
   */
 
 import { supabase, pgPool } from './supabaseClient';
-import { Article, Author, Draft } from './types';
+import { Article, Author, AuthorWallet, Draft, SupportedAuthorNetwork } from './types';
 import { calculatePopularityScore } from './popularityScorer';
 import { normalizeFlexibleAddress, tryNormalizeFlexibleAddress } from './utils/address';
 
@@ -52,17 +52,37 @@ class Database {
   /**
    * Helper: Convert DB row (snake_case) to Author (camelCase)
    */
-  private parseAuthorFromRow(row: any): Author {
+  private parseAuthorFromRow(row: any, wallets: AuthorWallet[] = []): Author {
+    const sortedWallets = [...wallets].sort((a, b) => {
+      if (a.isPrimary && !b.isPrimary) return -1;
+      if (!a.isPrimary && b.isPrimary) return 1;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    const primaryWallet = sortedWallets.find(wallet => wallet.isPrimary) || null;
+    const secondaryWallet = sortedWallets.find(wallet => !wallet.isPrimary) || null;
+    const supportedNetworks = sortedWallets.length
+      ? Array.from(new Set(sortedWallets.map(wallet => wallet.network)))
+      : [];
+    const primaryNetwork = (primaryWallet?.network || 'base') as SupportedAuthorNetwork;
+    if (!supportedNetworks.length) {
+      supportedNetworks.push(primaryNetwork);
+    }
+
     return {
+      authorUuid: row.author_uuid,
       address: row.address,
-      primaryPayoutNetwork: row.primary_payout_network || 'base',
-      secondaryPayoutNetwork: row.secondary_payout_network || undefined,
-      secondaryPayoutAddress: row.secondary_payout_address || undefined,
+      primaryPayoutNetwork: primaryNetwork,
+      primaryPayoutAddress: primaryWallet?.address || row.address,
+      secondaryPayoutNetwork: secondaryWallet?.network || undefined,
+      secondaryPayoutAddress: secondaryWallet?.address || undefined,
       createdAt: row.created_at,
       totalEarnings: parseFloat(row.total_earnings) || 0,
       totalArticles: row.total_articles || 0,
       totalViews: row.total_views || 0,
       totalPurchases: row.total_purchases || 0,
+      supportedNetworks,
+      wallets: sortedWallets,
     };
   }
 
@@ -81,6 +101,49 @@ class Database {
       expiresAt: row.expires_at,
       isAutoSave: !!row.is_auto_save,
     };
+  }
+
+  private async fetchAuthorWallets(authorUuid?: string | null): Promise<AuthorWallet[]> {
+    if (!authorUuid) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('author_wallets')
+      .select('*')
+      .eq('author_uuid', authorUuid)
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(row => ({
+      id: row.id,
+      authorUuid: row.author_uuid,
+      address: row.address,
+      network: row.network as SupportedAuthorNetwork,
+      isPrimary: !!row.is_primary,
+      createdAt: row.created_at,
+    }));
+  }
+
+  private async hydrateAuthorRow(row: any): Promise<Author> {
+    const wallets = await this.fetchAuthorWallets(row.author_uuid);
+    return this.parseAuthorFromRow(row, wallets);
+  }
+
+  private async findAuthorUuidByWallet(address: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('author_wallets')
+      .select('author_uuid')
+      .eq('address', address)
+      .limit(1);
+
+    if (error) {
+      throw error;
+    }
+
+    return data && data.length > 0 ? data[0].author_uuid : null;
   }
 
   private readonly articleSortColumnMap: Record<string, string> = {
@@ -355,15 +418,12 @@ class Database {
 
   async createOrUpdateAuthor(author: Author): Promise<Author> {
     const normalizedAddress = normalizeFlexibleAddress(author.address);
-    const primaryNetwork = author.primaryPayoutNetwork || 'base';
 
     const { data, error } = await supabase
       .from('authors')
       .upsert({
         address: normalizedAddress,
-        primary_payout_network: primaryNetwork,
-        secondary_payout_network: author.secondaryPayoutNetwork || null,
-        secondary_payout_address: author.secondaryPayoutAddress || null,
+        author_uuid: author.authorUuid || undefined,
         created_at: author.createdAt,
         total_earnings: author.totalEarnings,
         total_articles: author.totalArticles,
@@ -374,24 +434,49 @@ class Database {
       .single();
 
     if (error) throw error;
-    return this.parseAuthorFromRow(data);
+    return this.hydrateAuthorRow(data);
   }
 
   async getAuthor(address: string): Promise<Author | null> {
-    const normalizedAddress = normalizeFlexibleAddress(address);
+    return this.getAuthorByAddress(normalizeFlexibleAddress(address));
+  }
 
+  async getAuthorByAddress(address: string): Promise<Author | null> {
     const { data, error } = await supabase
       .from('authors')
       .select('*')
-      .eq('address', normalizedAddress)
+      .eq('address', address)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') return null; // Not found
+      if (error.code === 'PGRST116') return null;
       throw error;
     }
 
-    return this.parseAuthorFromRow(data);
+    return this.hydrateAuthorRow(data);
+  }
+
+  async getAuthorByUuid(authorUuid: string): Promise<Author | null> {
+    const { data, error } = await supabase
+      .from('authors')
+      .select('*')
+      .eq('author_uuid', authorUuid)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+
+    return this.hydrateAuthorRow(data);
+  }
+
+  async getAuthorByWallet(address: string): Promise<Author | null> {
+    const authorUuid = await this.findAuthorUuidByWallet(address);
+    if (!authorUuid) {
+      return null;
+    }
+    return this.getAuthorByUuid(authorUuid);
   }
 
   async recalculateAuthorTotals(authorAddress: string): Promise<void> {
@@ -431,6 +516,42 @@ class Database {
         client.release();
       }
     }
+  }
+
+  async setAuthorWallet(options: {
+    authorUuid: string;
+    address: string;
+    network: SupportedAuthorNetwork;
+    isPrimary: boolean;
+  }): Promise<void> {
+    const normalizedAddress = normalizeFlexibleAddress(options.address);
+
+    const deleteQuery = supabase
+      .from('author_wallets')
+      .delete()
+      .eq('author_uuid', options.authorUuid);
+
+    if (options.isPrimary) {
+      deleteQuery.eq('is_primary', true);
+    } else {
+      deleteQuery.eq('network', options.network);
+    }
+
+    const { error: deleteError } = await deleteQuery;
+    if (deleteError && deleteError.code && deleteError.code !== 'PGRST116') {
+      throw deleteError;
+    }
+
+    const { error } = await supabase
+      .from('author_wallets')
+      .insert({
+        author_uuid: options.authorUuid,
+        address: normalizedAddress,
+        network: options.network,
+        is_primary: options.isPrimary,
+      });
+
+    if (error) throw error;
   }
 
   // ============================================

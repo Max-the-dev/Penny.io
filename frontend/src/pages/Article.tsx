@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { Clock, User, Lock, HeartHandshake, Tag } from 'lucide-react';
-import { apiService, Article as ArticleType, SupportedAuthorNetwork } from '../services/api';
+import { apiService, Article as ArticleType, type AuthorWallet, type SupportedAuthorNetwork } from '../services/api';
 import { x402PaymentService, type SupportedNetwork } from '../services/x402PaymentService';
 import { useAccount, useWalletClient } from 'wagmi';
 import { useAppKitProvider } from '@reown/appkit/react';
@@ -45,6 +45,8 @@ function Article() {
   const [tipResult, setTipResult] = useState<{ success: boolean; message: string; txHash?: string } | null>(null);
   const [authorNetworks, setAuthorNetworks] = useState<SupportedAuthorNetwork[]>(['base']);
   const [selectedNetworkFamily, setSelectedNetworkFamily] = useState<'base' | 'solana'>('base');
+  const [authorWallets, setAuthorWallets] = useState<AuthorWallet[]>([]);
+  const [isPaymentStatusLoaded, setIsPaymentStatusLoaded] = useState(false);
 
   // Dynamic chain detection to build correct payload
   const { chain } = useAccount();
@@ -109,12 +111,29 @@ function Article() {
         const response = await apiService.getArticleById(parseInt(id));
         if (response.success && response.data) {
           setArticle(response.data);
+          setHasPaid(false);
+          setIsPaymentStatusLoaded(false);
 
           const authorInfo = await apiService.getAuthor(response.data.authorAddress);
-          if (authorInfo.success && authorInfo.data?.supportedNetworks?.length) {
-            setAuthorNetworks(
-              Array.from(new Set(authorInfo.data.supportedNetworks))
-            );
+          if (authorInfo.success && authorInfo.data) {
+            if (authorInfo.data.supportedNetworks?.length) {
+              setAuthorNetworks(
+                Array.from(new Set(authorInfo.data.supportedNetworks))
+              );
+            }
+
+            if (authorInfo.data.wallets?.length) {
+              setAuthorWallets(authorInfo.data.wallets);
+            } else {
+              setAuthorWallets([{
+                id: 'primary-fallback',
+                authorUuid: authorInfo.data.authorUuid || 'primary',
+                address: authorInfo.data.address,
+                network: authorInfo.data.primaryPayoutNetwork || 'base',
+                isPrimary: true,
+                createdAt: authorInfo.data.createdAt,
+              }]);
+            }
           }
 
           // Check if user has already paid for this article (Base or Solana address)
@@ -123,22 +142,36 @@ function Article() {
             solanaSigner?.address
           ].filter((value): value is string => Boolean(value));
 
-          for (const payer of potentialPayers) {
-            const hasPaidBefore = await x402PaymentService.checkPaymentStatus(
-              response.data.id,
-              payer
-            );
-            if (hasPaidBefore) {
-              setHasPaid(true);
-              break;
+          if (!potentialPayers.length) {
+            setHasPaid(false);
+            setIsPaymentStatusLoaded(false);
+            return;
+          }
+
+          let hasAccess = false;
+          try {
+            for (const payer of potentialPayers) {
+              const hasPaidBefore = await x402PaymentService.checkPaymentStatus(
+                response.data.id,
+                payer
+              );
+              if (hasPaidBefore) {
+                hasAccess = true;
+                break;
+              }
             }
+          } finally {
+            setHasPaid(hasAccess);
+            setIsPaymentStatusLoaded(true);
           }
         } else {
           setLoadError(response.error || 'Article not found');
+          setIsPaymentStatusLoaded(true);
         }
       } catch (err) {
         setLoadError('Failed to load article');
         console.error('Error fetching article:', err);
+        setIsPaymentStatusLoaded(true);
       } finally {
         setLoading(false);
       }
@@ -148,7 +181,26 @@ function Article() {
   }, [id, address, solanaSigner?.address]);
 
   // Check if current user is the author of this article
-  const isAuthor = Boolean(address && article && address === article.authorAddress);
+  const normalizeWalletAddress = (value?: string | null): string | undefined => {
+    if (!value) return undefined;
+    if (value.startsWith('0x')) {
+      return value.toLowerCase();
+    }
+    return value;
+  };
+
+  const normalizedUserAddress = useMemo(() => normalizeWalletAddress(address), [address]);
+
+  const isAuthor = useMemo(() => {
+    if (!normalizedUserAddress) return false;
+    if (authorWallets.length) {
+      return authorWallets.some(wallet => normalizeWalletAddress(wallet.address) === normalizedUserAddress);
+    }
+    if (article) {
+      return normalizeWalletAddress(article.authorAddress) === normalizedUserAddress;
+    }
+    return false;
+  }, [normalizedUserAddress, authorWallets, article?.authorAddress]);
 
   // Increment view count when article loads (only once per session)
   useEffect(() => {
@@ -362,7 +414,17 @@ function Article() {
           </header>
 
           <div className="article-body">
-            {!isAuthor && !hasPaid && (
+            {!isAuthor && !isPaymentStatusLoaded && (
+              <div className="article-preview">
+                <p>
+                  {address
+                    ? 'Checking your access...'
+                    : 'Connect your wallet to check access.'}
+                </p>
+              </div>
+            )}
+
+            {!isAuthor && isPaymentStatusLoaded && !hasPaid && (
               <div className="article-preview">
                 {article.preview.split('\n\n').map((paragraph, index) => (
                   <p key={index} dangerouslySetInnerHTML={{__html: sanitizeHTML(paragraph)}} />
@@ -370,7 +432,7 @@ function Article() {
               </div>
             )}
 
-            {!hasPaid && !isAuthor && (
+            {!hasPaid && isPaymentStatusLoaded && !isAuthor && (
               <div className="payment-gate">
                 <div className="payment-overlay">
                   <Lock size={48} />

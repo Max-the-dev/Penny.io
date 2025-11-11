@@ -23,7 +23,17 @@ export interface Article {
 
 export type SupportedAuthorNetwork = 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
 
+export interface AuthorWallet {
+  id: string;
+  authorUuid: string;
+  address: string;
+  network: SupportedAuthorNetwork;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
 export interface Author {
+  authorUuid?: string;
   address: string;
   createdAt: string;
   totalEarnings: number;
@@ -31,9 +41,11 @@ export interface Author {
   totalViews: number;
   totalPurchases: number;
   primaryPayoutNetwork?: SupportedAuthorNetwork;
+  primaryPayoutAddress?: string;
   secondaryPayoutNetwork?: SupportedAuthorNetwork;
   secondaryPayoutAddress?: string;
   supportedNetworks?: SupportedAuthorNetwork[];
+  wallets?: AuthorWallet[];
 }
 
 export interface CreateArticleRequest {

@@ -1,5 +1,7 @@
 // Backend types for Penny.io
 
+export type SupportedAuthorNetwork = 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
+
 export interface Article {
   id: number;
   title: string;
@@ -22,16 +24,29 @@ export interface Article {
   popularityScore: number;
 }
 
-export interface Author {
+export interface AuthorWallet {
+  id: string;
+  authorUuid: string;
   address: string;
-  primaryPayoutNetwork: 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
-  secondaryPayoutNetwork?: 'base' | 'base-sepolia' | 'solana' | 'solana-devnet';
+  network: SupportedAuthorNetwork;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export interface Author {
+  authorUuid?: string;
+  address: string;
+  primaryPayoutNetwork: SupportedAuthorNetwork;
+  primaryPayoutAddress?: string;
+  secondaryPayoutNetwork?: SupportedAuthorNetwork;
   secondaryPayoutAddress?: string;
   createdAt: string;
   totalEarnings: number;
   totalArticles: number;
   totalViews: number;
   totalPurchases: number;
+  supportedNetworks?: SupportedAuthorNetwork[];
+  wallets?: AuthorWallet[];
 }
 
 export interface CreateArticleRequest {

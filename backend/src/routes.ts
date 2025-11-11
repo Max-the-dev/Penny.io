@@ -65,6 +65,21 @@ const DEFAULT_EVM_PAYOUT_NETWORK: SupportedPayoutNetwork =
 const DEFAULT_SOLANA_PAYOUT_NETWORK: SupportedPayoutNetwork =
   DEFAULT_X402_NETWORK === 'solana-devnet' ? 'solana-devnet' : 'solana';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (value: string): boolean => UUID_REGEX.test(value);
+
+async function resolveCanonicalAuthorAddress(address: string): Promise<{
+  canonicalAddress: string;
+  author: Author | null;
+}> {
+  const normalized = normalizeFlexibleAddress(address);
+  const author = await db.getAuthorByWallet(normalized);
+  return {
+    canonicalAddress: author?.address || normalized,
+    author,
+  };
+}
+
 
 function resolveNetworkPreference(req: Request): SupportedX402Network {
   const raw = req.query?.network;
@@ -322,6 +337,14 @@ async function buildPaymentRequirement(
  * it stores the corresponding primaryPayoutNetwor
  */
 async function ensureAuthorRecord(address: string, networkHint?: SupportedPayoutNetwork): Promise<Author> {
+  const normalizedFlexible = tryNormalizeFlexibleAddress(address);
+  if (normalizedFlexible) {
+    const authorByWallet = await db.getAuthorByWallet(normalizedFlexible);
+    if (authorByWallet) {
+      return authorByWallet;
+    }
+  }
+
   let normalizedAddress: string;
   let primaryNetwork: SupportedPayoutNetwork | undefined = networkHint;
 
@@ -346,6 +369,23 @@ async function ensureAuthorRecord(address: string, networkHint?: SupportedPayout
 
   const existingAuthor = await db.getAuthor(normalizedAddress);
   if (existingAuthor) {
+    const hasPrimaryWallet = existingAuthor.wallets?.some(
+      wallet => wallet.isPrimary && wallet.address === normalizedAddress
+    );
+
+    if (!hasPrimaryWallet && existingAuthor.authorUuid) {
+      await db.setAuthorWallet({
+        authorUuid: existingAuthor.authorUuid,
+        address: normalizedAddress,
+        network: existingAuthor.primaryPayoutNetwork,
+        isPrimary: true,
+      });
+      const refreshed = await db.getAuthorByUuid(existingAuthor.authorUuid);
+      if (refreshed) {
+        return refreshed;
+      }
+    }
+
     return existingAuthor;
   }
 
@@ -360,8 +400,22 @@ async function ensureAuthorRecord(address: string, networkHint?: SupportedPayout
     totalPurchases: 0,
   };
 
-  await db.createOrUpdateAuthor(newAuthor);
-  return newAuthor;
+  const savedAuthor = await db.createOrUpdateAuthor(newAuthor);
+
+  if (savedAuthor.authorUuid) {
+    await db.setAuthorWallet({
+      authorUuid: savedAuthor.authorUuid,
+      address: normalizedAddress,
+      network: savedAuthor.primaryPayoutNetwork,
+      isPrimary: true,
+    });
+    const refreshed = await db.getAuthorByUuid(savedAuthor.authorUuid);
+    if (refreshed) {
+      return refreshed;
+    }
+  }
+
+  return savedAuthor;
 }
 
 // Utility function to generate preview from content
@@ -401,9 +455,23 @@ function estimateReadTime(content: string): string {
 router.get('/articles', readLimiter, validate(getArticlesQuerySchema, 'query'), async (req: Request, res: Response) => {
   try {
     const { authorAddress, search, sortBy, sortOrder } = req.query as GetArticlesQuery;
+    let resolvedAuthorAddress: string | undefined;
+
+    if (authorAddress) {
+      try {
+        const { canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress);
+        resolvedAuthorAddress = canonicalAddress;
+      } catch {
+        const response: ApiResponse<never> = {
+          success: false,
+          error: 'Invalid author address',
+        };
+        return res.status(400).json(response);
+      }
+    }
 
     const articles = await db.getArticles({
-      authorAddress,
+      authorAddress: resolvedAuthorAddress,
       search,
       sortBy,
       sortOrder
@@ -546,7 +614,7 @@ router.post('/articles', writeLimiter, validate(createArticleSchema), async (req
       content,
       preview,
       price,
-      authorAddress,
+      authorAddress: author.address,
       authorPrimaryNetwork: author.primaryPayoutNetwork,
       authorSecondaryNetwork: author.secondaryPayoutNetwork,
       authorSecondaryAddress: author.secondaryPayoutAddress,
@@ -566,7 +634,7 @@ router.post('/articles', writeLimiter, validate(createArticleSchema), async (req
 
     if (typeof draftId === 'number') {
       try {
-        await db.deleteDraft(draftId, authorAddress);
+        await db.deleteDraft(draftId, author.address);
       } catch (draftError) {
         console.error('Failed to delete draft after publishing article:', draftError);
       }
@@ -596,32 +664,42 @@ router.post('/articles', writeLimiter, validate(createArticleSchema), async (req
 // GET /api/authors/:address - Get author info
 router.get('/authors/:address', readLimiter, async (req: Request, res: Response) => {
   try {
-    const { address } = req.params;
+    const { address: identifier } = req.params;
     const networkHint = req.query.network as SupportedPayoutNetwork | undefined;
+    let author: Author | null = null;
 
-    // Basic validation: ensure the address looks like the expected network type
-    try {
-      normalizeFlexibleAddress(address);
-    } catch {
-      const response: ApiResponse<never> = {
-        success: false,
-        error: 'Invalid author address'
-      };
-      return res.status(400).json(response);
+    if (isUuid(identifier)) {
+      author = await db.getAuthorByUuid(identifier);
+      if (!author) {
+        return res.status(404).json({
+          success: false,
+          error: 'Author not found'
+        } satisfies ApiResponse<never>);
+      }
+    } else {
+      // Basic validation: ensure the address looks like the expected network type
+      try {
+        normalizeFlexibleAddress(identifier);
+      } catch {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid author address'
+        } satisfies ApiResponse<never>);
+      }
+      author = await ensureAuthorRecord(identifier, networkHint);
     }
 
-    const author = await ensureAuthorRecord(address, networkHint);
-    const supportedNetworks = [
-      author.primaryPayoutNetwork,
-      author.secondaryPayoutNetwork
-    ].filter(Boolean);
+    const supportedNetworks =
+      author.supportedNetworks && author.supportedNetworks.length > 0
+        ? author.supportedNetworks
+        : ([author.primaryPayoutNetwork, author.secondaryPayoutNetwork].filter(Boolean) as SupportedX402Network[]);
 
     const response: ApiResponse<Author> = {
       success: true,
       data: {
         ...author,
-        supportedNetworks
-      } as Author & { supportedNetworks: (SupportedX402Network | undefined)[] }
+        supportedNetworks,
+      },
     };
 
     res.json(response);
@@ -642,18 +720,8 @@ const SOLANA_NETWORKS: SupportedPayoutNetwork[] = ['solana', 'solana-devnet'];
 // POST /api/authors/:address/payout-methods - Add or update secondary payout method
 router.post('/authors/:address/payout-methods', writeLimiter, async (req: Request, res: Response) => {
   try {
-    const { address } = req.params;
+    const { address: identifier } = req.params;
     const { network, payoutAddress } = req.body || {};
-
-    let normalizedAuthorAddress: string;
-    try {
-      normalizedAuthorAddress = normalizeFlexibleAddress(address);
-    } catch {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid author address'
-      } satisfies ApiResponse<never>);
-    }
 
     if (!network || !SUPPORTED_PAYOUT_NETWORKS.includes(network)) {
       return res.status(400).json({
@@ -683,7 +751,45 @@ router.post('/authors/:address/payout-methods', writeLimiter, async (req: Reques
       } satisfies ApiResponse<never>);
     }
 
-    const author = await ensureAuthorRecord(normalizedAuthorAddress);
+    let author: Author | null = null;
+    if (isUuid(identifier)) {
+      author = await db.getAuthorByUuid(identifier);
+      if (!author) {
+        return res.status(404).json({
+          success: false,
+          error: 'Author not found'
+        } satisfies ApiResponse<never>);
+      }
+    } else {
+      try {
+        normalizeFlexibleAddress(identifier);
+      } catch {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid author address'
+        } satisfies ApiResponse<never>);
+      }
+      author = await ensureAuthorRecord(identifier);
+    }
+
+    if (!author.authorUuid) {
+      return res.status(500).json({
+        success: false,
+        error: 'Author record missing unique id'
+      } satisfies ApiResponse<never>);
+    }
+
+    const existingNetworkWallet = author.wallets?.find(wallet => wallet.network === network);
+    if (existingNetworkWallet) {
+      const message =
+        network === 'solana' || network === 'solana-devnet'
+          ? 'You already have a Solana payout address configured.'
+          : 'You already have a Base payout address configured.';
+      return res.status(400).json({
+        success: false,
+        error: `${message} Remove it before adding another.`,
+      } satisfies ApiResponse<never>);
+    }
 
     if (author.primaryPayoutNetwork === network) {
       return res.status(400).json({
@@ -691,6 +797,13 @@ router.post('/authors/:address/payout-methods', writeLimiter, async (req: Reques
         error: 'Network already configured as primary payout method'
       } satisfies ApiResponse<never>);
     }
+
+    await db.setAuthorWallet({
+      authorUuid: author.authorUuid,
+      address: normalizedPayoutAddress,
+      network,
+      isPrimary: false,
+    });
 
     author.secondaryPayoutNetwork = network;
     author.secondaryPayoutAddress = normalizedPayoutAddress;
@@ -1372,7 +1485,18 @@ router.post('/drafts', writeLimiter, validate(createDraftSchema), async (req: Re
       return res.status(400).json(response);
     }
 
-    await ensureAuthorRecord(authorAddress);
+    let canonicalAddress: string;
+    try {
+      ({ canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress));
+    } catch {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid author address'
+      };
+      return res.status(400).json(response);
+    }
+
+    await ensureAuthorRecord(canonicalAddress);
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
@@ -1381,7 +1505,7 @@ router.post('/drafts', writeLimiter, validate(createDraftSchema), async (req: Re
       title: title || '',
       content: content || '',
       price: price || 0.05,
-      authorAddress,
+      authorAddress: canonicalAddress,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
@@ -1411,9 +1535,20 @@ router.post('/drafts', writeLimiter, validate(createDraftSchema), async (req: Re
 router.get('/drafts/:authorAddress', readLimiter, async (req: Request, res: Response) => {
   try {
     const { authorAddress } = req.params;
-    let normalizedAddress: string;
     try {
-      normalizedAddress = normalizeFlexibleAddress(authorAddress);
+      const { canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress);
+      
+      // Clean up expired drafts first
+      await db.cleanupExpiredDrafts();
+      
+      const drafts = await db.getDraftsByAuthor(canonicalAddress);
+
+      const response: ApiResponse<Draft[]> = {
+        success: true,
+        data: drafts
+      };
+
+      res.json(response);
     } catch {
       const response: ApiResponse<never> = {
         success: false,
@@ -1421,18 +1556,6 @@ router.get('/drafts/:authorAddress', readLimiter, async (req: Request, res: Resp
       };
       return res.status(400).json(response);
     }
-    
-    // Clean up expired drafts first
-    await db.cleanupExpiredDrafts();
-    
-    const drafts = await db.getDraftsByAuthor(normalizedAddress);
-
-    const response: ApiResponse<Draft[]> = {
-      success: true,
-      data: drafts
-    };
-
-    res.json(response);
   } catch (error) {
     console.error('Error fetching drafts:', error);
     const response: ApiResponse<never> = {
@@ -1457,7 +1580,18 @@ router.delete('/drafts/:id', writeLimiter, validate(deleteRequestSchema), async 
       return res.status(400).json(response);
     }
 
-    const result = await db.deleteDraft(draftId, authorAddress);
+    let canonicalAddress: string;
+    try {
+      ({ canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress));
+    } catch {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid author address'
+      };
+      return res.status(400).json(response);
+    }
+
+    const result = await db.deleteDraft(draftId, canonicalAddress);
 
     if (result) {
       const response: ApiResponse<{ message: string }> = {
@@ -1515,7 +1649,18 @@ router.put('/articles/:id', writeLimiter, validate(updateArticleSchema), async (
       return res.status(404).json(response);
     }
 
-    if (existingArticle.authorAddress !== authorAddress) {
+    let canonicalAddress: string;
+    try {
+      ({ canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress));
+    } catch {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid author address'
+      };
+      return res.status(400).json(response);
+    }
+
+    if (existingArticle.authorAddress !== canonicalAddress) {
       const response: ApiResponse<never> = {
         success: false,
         error: 'Unauthorized: You can only edit your own articles'
@@ -1592,7 +1737,18 @@ router.delete('/articles/:id', writeLimiter, validate(deleteRequestSchema), asyn
       return res.status(404).json(response);
     }
 
-    if (existingArticle.authorAddress !== authorAddress) {
+    let canonicalAddress: string;
+    try {
+      ({ canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress));
+    } catch {
+      const response: ApiResponse<never> = {
+        success: false,
+        error: 'Invalid author address'
+      };
+      return res.status(400).json(response);
+    }
+
+    if (existingArticle.authorAddress !== canonicalAddress) {
       const response: ApiResponse<never> = {
         success: false,
         error: 'Unauthorized: You can only delete your own articles'

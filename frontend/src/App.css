@@ -155,6 +155,8 @@ wui-connect-button {
   --apkt-tokens-theme-textSecondary: #202020 !important;
   --apkt-tokens-theme-textTertiary: #202020 !important;
   color: #202020 !important;
+  display: block !important;
+  width: 100% !important;
 }
 
 /* Force black background on all button elements */
@@ -176,7 +178,7 @@ wui-account-button {
   border-radius: 6px !important;
   font-weight: 500 !important;
   font-size: 14px !important;
-  padding: 10px 16px !important;
+  padding: 10px 24px !important;
   transition: all 0.2s ease !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
@@ -209,11 +211,19 @@ w3m-account-button::part(button) {
   border-radius: 6px !important;
   font-weight: 500 !important;
   font-size: 14px !important;
-  padding: 10px 16px !important;
+  padding: 10px 24px !important;
   transition: all 0.2s ease !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   color: white !important;
+}
+
+/* Target internal text elements for better spacing */
+appkit-button wui-text,
+appkit-button span,
+w3m-button wui-text,
+w3m-button span {
+  padding: 0 4px !important;
 }
 
 /* Hover states */
@@ -1804,56 +1814,60 @@ main {
 .x402-validation-button {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  justify-content: flex-start;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
   border: none;
   border-radius: 999px;
-  padding: 0;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
-  overflow: visible;
-  min-width: 44px;
+  overflow: hidden;
   width: 44px;
   height: 44px;
-  justify-content: center;
+  padding-left: 12px;
   flex-shrink: 0;
   position: relative;
 }
 
-.x402-validation-button svg {
+.x402-validation-button .button-icon {
   width: 20px;
   height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  position: relative;
-  z-index: 1;
 }
 
-.x402-validation-button span {
-  position: absolute;
-  left: 44px;
+.x402-validation-button .button-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.x402-validation-button .button-text {
+  max-width: 0;
   opacity: 0;
   white-space: nowrap;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  margin-left: 0;
 }
 
 .x402-validation-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 30px rgba(16, 185, 129, 0.3);
   width: auto;
-  padding-right: 18px;
   padding-left: 12px;
-  gap: 8px;
+  padding-right: 18px;
 }
 
-.x402-validation-button:hover span {
+.x402-validation-button:hover .button-text {
+  max-width: 200px;
   opacity: 1;
-  pointer-events: auto;
+  margin-left: 8px;
 }
 
 .x402-validation-button:active {
@@ -1864,55 +1878,59 @@ main {
 .donate-button {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  justify-content: flex-start;
   background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
   color: #ffffff;
   border: none;
   border-radius: 999px;
-  padding: 0;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
-  overflow: visible;
-  min-width: 44px;
+  overflow: hidden;
   width: 44px;
   height: 44px;
-  justify-content: center;
+  padding-left: 12px;
   flex-shrink: 0;
   position: relative;
 }
 
-.donate-button svg {
+.donate-button .button-icon {
   width: 20px;
   height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  position: relative;
-  z-index: 1;
 }
 
-.donate-button span {
-  position: absolute;
-  left: 44px;
+.donate-button .button-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.donate-button .button-text {
+  max-width: 0;
   opacity: 0;
   white-space: nowrap;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  margin-left: 0;
 }
 
 .donate-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 30px rgba(37, 99, 235, 0.3);
   width: auto;
-  padding-right: 18px;
   padding-left: 12px;
-  gap: 8px;
+  padding-right: 18px;
 }
 
-.donate-button:hover span {
+.donate-button:hover .button-text {
+  max-width: 200px;
   opacity: 1;
-  pointer-events: auto;
+  margin-left: 8px;
 }
 
 .donate-button:active {
@@ -8213,6 +8231,392 @@ main {
     padding: 3px 6px;
     font-size: 0.7rem;
     font-weight: 600;
+  }
+}
+
+/* ============================================
+   Whitepaper Page Styles
+   ============================================ */
+
+.whitepaper-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+  min-height: calc(100vh - 64px);
+}
+
+.whitepaper-hero {
+  text-align: center;
+  padding: 80px 0 60px;
+  max-width: 800px;
+  margin: 0 auto;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.whitepaper-hero .hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%);
+  border-radius: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.whitepaper-hero .hero-icon svg {
+  color: #ffffff;
+}
+
+.whitepaper-hero h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.whitepaper-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.whitepaper-meta span:nth-child(2) {
+  color: #d1d5db;
+}
+
+/* Table of Contents */
+.toc-section {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  margin: 40px 0;
+}
+
+.toc-section h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+}
+
+.toc {
+  font-size: 1rem;
+  line-height: 2;
+}
+
+.toc-placeholder {
+  color: #6b7280;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Whitepaper Content Sections */
+.whitepaper-section {
+  margin-bottom: 60px;
+}
+
+.whitepaper-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 0;
+}
+
+.whitepaper-content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 48px 0 24px 0;
+  padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.whitepaper-content h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.whitepaper-content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 32px 0 16px 0;
+}
+
+.whitepaper-content h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 24px 0 12px 0;
+}
+
+.whitepaper-content p {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #374151;
+  margin-bottom: 20px;
+}
+
+.whitepaper-content ul,
+.whitepaper-content ol {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #374151;
+  margin: 20px 0;
+  padding-left: 32px;
+}
+
+.whitepaper-content li {
+  margin-bottom: 12px;
+}
+
+.whitepaper-content strong {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.whitepaper-content em {
+  font-style: italic;
+}
+
+.whitepaper-content a {
+  color: #1a1a1a;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.whitepaper-content a:hover {
+  color: #4a4a4a;
+}
+
+/* Code Blocks */
+.code-block-container {
+  margin: 32px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.code-block-header svg {
+  color: #6b7280;
+}
+
+.code-block {
+  background: #1a1a1a;
+  color: #e5e7eb;
+  padding: 20px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.code-block code {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+
+/* Inline code */
+.whitepaper-content code {
+  background: #f9fafb;
+  color: #1a1a1a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  font-size: 0.9em;
+  border: 1px solid #e5e7eb;
+}
+
+/* Diagrams and Images */
+.diagram-container {
+  margin: 40px 0;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 48px;
+  background: #f9fafb;
+}
+
+.diagram-placeholder {
+  text-align: center;
+  color: #6b7280;
+}
+
+.diagram-placeholder svg {
+  margin: 0 auto 16px;
+  opacity: 0.5;
+}
+
+.diagram-placeholder p {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #374151;
+}
+
+.diagram-placeholder span {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.whitepaper-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 32px 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Download Section */
+.download-section {
+  margin-top: 80px;
+  padding-top: 40px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.download-card {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 32px;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.download-card svg {
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.download-card h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 12px 0;
+}
+
+.download-card p {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0 0 24px 0;
+  line-height: 1.6;
+}
+
+.download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-button:not(:disabled):hover {
+  background: #2a2a2a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.download-button:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.download-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .whitepaper-hero {
+    padding: 60px 0 40px;
+  }
+
+  .whitepaper-hero h1 {
+    font-size: 2rem;
+  }
+
+  .whitepaper-hero .hero-icon {
+    width: 72px;
+    height: 72px;
+  }
+
+  .whitepaper-hero .hero-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .whitepaper-content {
+    padding: 20px 0;
+  }
+
+  .whitepaper-content h2 {
+    font-size: 1.5rem;
+    margin: 32px 0 16px 0;
+  }
+
+  .whitepaper-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .whitepaper-content p,
+  .whitepaper-content ul,
+  .whitepaper-content ol {
+    font-size: 1rem;
+  }
+
+  .code-block {
+    font-size: 0.75rem;
+    padding: 16px;
+  }
+
+  .diagram-container {
+    padding: 32px 16px;
+  }
+
+  .download-card {
+    padding: 24px;
+  }
+
+  .toc-section {
+    padding: 24px 16px;
   }
 }
 

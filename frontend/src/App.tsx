@@ -18,6 +18,7 @@ import Terms from './pages/Terms';
 import Contact from './pages/Contact';
 import X402Test from './pages/X402Test';
 import Explore from './pages/Explore';
+import Whitepaper from './pages/Whitepaper';
 import './App.css'
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/edit/:id" element={<EditArticle />} />
               <Route path="/article/:id" element={<Article />} />
+              <Route path="/whitepaper" element={<Whitepaper />} />
               <Route path="/about" element={<About />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/pricing" element={<Pricing />} />

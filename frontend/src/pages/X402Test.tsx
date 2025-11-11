@@ -216,9 +216,13 @@ Encoded Header:
 🔧 Settling payment via CDP facilitator...
    From: ${address}
    To: ${currentPaymentReq.to}
-   Amount: ${currentPaymentReq.accept?.maxAmountRequired} micro USDC ${txHash ? `
-   Transaction Hash: ${txHash}
-   ` : '⚠️ Settlement succeeded but no transaction hash returned'}
+   Amount: ${currentPaymentReq.accept?.maxAmountRequired} micro USDC
+   ${
+     txHash
+       ? `Transaction Hash: ${txHash}`
+       : '⚠️ Settlement succeeded but no transaction hash returned'
+   }
+
 ✅ Settlement completed successfully!
 ✅ Access to article granted.`;
 
