@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import rateLimit from 'express-rate-limit';
 import Database from './database';
-import { supabase } from './supabaseClient';
+import { pgPool, supabase } from './supabaseClient';
 import { Article, Author, Draft, CreateArticleRequest, CreateDraftRequest, ApiResponse, GetArticlesQuery } from './types';
 import {
   validate,
@@ -31,6 +31,7 @@ import {
 import { settleAuthorization } from './settlementService';
 import { getFacilitatorFeePayer } from './facilitatorSupport';
 import { getCACertificates } from 'tls';
+import { success } from 'zod';
 
 const router = express.Router();
 const db = new Database();
@@ -875,6 +876,48 @@ router.put('/articles/:id/view', readLimiter, async (req: Request, res: Response
   }
 });
 
+// GET /api/authors/:ifentifier/stats - 7d purchase stat
+router.get('/authors/:identifier/stats', readLimiter, async (req: Request, res: Response) => {
+  try {
+    const { identifier } = req.params;
+    
+    // 1) Resolve identified (wallet or UUID) -> canonical author record
+    const canonical = await resolveCanonicalAuthorAddress(identifier).catch(() => null);
+    if (!canonical?.author) {
+      return res.status(404).json({success: false, error: 'Author not found'});
+    }
+
+    // 2) Pull lifetime stats from the author row (both wallets included)
+    const lifetimeAuthor = canonical.author;
+
+    // 3) TODO: query payments/tips for last-7-day metrics (we’ll fill this in next step)
+    const { rows: recentPayments } = await pgPool.query(
+      `
+        SELECT
+          COUNT(*) AS purchase_count,
+          COALESCE(SUM(p.amount), 0) AS purchase_total
+        FROM payments p
+        INNER JOIN articles a ON p.article_id = a.id
+        WHERE a.author_address = $1
+          AND p.created_at >= NOW() - INTERVAL '7 days'
+      `,
+      [canonical.author.address]
+    );
+
+    const purchases7d = parseInt(recentPayments[0]?.purchase_count || '0', 10);
+
+    return res.json({
+      success: true,
+      data: {
+        purchases7d,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching author stats', error);
+    return res.status(500).json({success: false, error: 'Failed to fetch last 7 days purchases'})
+  }
+});
+
 // POST /api/articles/:id/purchase - x402 Purchase with dynamic pricing and recipients
 router.post('/articles/:id/purchase', criticalLimiter, async (req: Request, res: Response) => {
   try {
@@ -1072,6 +1115,10 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req: Request, res:
     // Record payment with txHash
     await recordArticlePurchase(articleId);
     await recordPayment(articleId, payerAddress || 'unknown', article.price, txHash);
+    await incrementAuthorLifetimeStats(article.authorAddress, {
+      earningsDelta: article.price,
+      purchaseDelta: 1,
+    });
 
     console.log(`✅ Purchase successful: "${article.title}" (ID: ${article.id})`);
     console.log(`   💰 Amount: $${article.price.toFixed(2)} | 🧾 From: ${payerAddress || 'unknown'} | ✉️ To: ${article.authorAddress}`);
@@ -1443,8 +1490,9 @@ router.post('/articles/:id/tip', criticalLimiter, async (req: Request, res: Resp
       console.log(`   🔗 Transaction: ${txHash}`);
     }
 
-    // TODO: Optional - record tip in database for analytics
-    // await recordTip(articleId, authorAddress, amount, payerAddress, txHash);
+    await incrementAuthorLifetimeStats(article.authorAddress, {
+      earningsDelta: amount,
+    });
 
     return res.json({
       success: true,
@@ -2075,6 +2123,28 @@ async function checkPaymentStatus(articleId: number, userAddress: string): Promi
 
 async function recordPayment(articleId: number, userAddress: string, amount: number, transactionHash?: string): Promise<void> {
   await db.recordPayment(articleId, userAddress, amount, transactionHash);
+}
+
+async function incrementAuthorLifetimeStats(
+  authorAddress: string,
+  deltas: { earningsDelta?: number; purchaseDelta?: number }
+): Promise<void> {
+  try {
+    const author = await db.getAuthor(authorAddress);
+    if (!author) {
+      return;
+    }
+
+    const updatedAuthor = {
+      ...author,
+      totalEarnings: Math.max(0, (author.totalEarnings || 0) + (deltas.earningsDelta || 0)),
+      totalPurchases: Math.max(0, (author.totalPurchases || 0) + (deltas.purchaseDelta || 0)),
+    };
+
+    await db.createOrUpdateAuthor(updatedAuthor);
+  } catch (error) {
+    console.error('Failed to increment author stats:', error);
+  }
 }
 
 async function resolveSolanaAtaOwner(ataAddress: string, network: SupportedX402Network): Promise<string | null> {

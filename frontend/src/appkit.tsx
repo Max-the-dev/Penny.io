@@ -39,6 +39,8 @@ createAppKit({
     onramp: false,
     email: false,
     socials: [],
+    history: false,  // Disables "Activity" tab
+    send: false,     // Disables "Send" functionality
   },
   enableWalletConnect: true,
   enableInjected: true,

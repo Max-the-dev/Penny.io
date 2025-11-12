@@ -63,11 +63,14 @@ function Dashboard() {
   const [dateFilter, setDateFilter] = useState('all'); // all, week, month, quarter
   const [categoryFilter, setCategoryFilter] = useState('all'); // all, or specific category
 
+  const [purchases7d, setPurchases7d] = useState(0);
+
   // Fetch articles and author data on component mount and when address changes
   useEffect(() => {
     if (isConnected && address) {
       fetchArticles();
       fetchAuthor();
+      fetchPurchaseStats();
     } else {
       setArticles([]);
       setAuthor(null);
@@ -132,6 +135,18 @@ function Dashboard() {
         : 'Failed to fetch author stats';
       setAuthorError(prev => prev || fallbackMessage);
       console.error('Error fetching author:', err);
+    }
+  };
+
+  const fetchPurchaseStats = async () => {
+    if (!address) return;
+    try {
+      const response = await apiService.getAuthorStats(address);
+      if (response.success && response.data) {
+        setPurchases7d(response.data.purchases7d);
+      }
+    } catch (error) {
+      console.error('Error fetching purchase stats:', error);
     }
   };
 
@@ -322,7 +337,11 @@ function Dashboard() {
     return true;
   });
 
-  // Calculate stats from author data (lifetime totals) and current articles (for average)
+  const purchasesLast7Days = articles.reduce((sum, article) =>
+    isDateWithinRange(article.publishDate, 'week') ? sum + (article.purchases || 0) : sum,
+  0);
+
+  // Calculate stats from author data (lifetime totals) and derived short-term metrics
   const stats = {
     totalEarnings: author?.totalEarnings || 0,
     totalArticles: author?.totalArticles || 0,
@@ -330,7 +349,8 @@ function Dashboard() {
     totalPurchases: author?.totalPurchases || 0,
     avgEarningsPerArticle: (author?.totalArticles || 0) > 0 
       ? (author?.totalEarnings || 0) / (author?.totalArticles || 0)
-      : 0
+      : 0,
+    purchasesLast7Days,
   };
 
   // Clear search and filters function
@@ -400,7 +420,7 @@ function Dashboard() {
             <div className="stat-content">
               <h3>Total Views</h3>
               <p className="stat-value">{stats.totalViews.toLocaleString()}</p>
-              <span className="stat-change">{stats.totalViews > 0 ? ((stats.totalPurchases / stats.totalViews) * 100).toFixed(1) : '0'}% conversion rate</span>
+              <span className="stat-change">Conversion rate {stats.totalViews > 0 ? ((stats.totalPurchases / stats.totalViews) * 100).toFixed(1) : '0'}%</span>
             </div>
           </div>
           
@@ -411,7 +431,7 @@ function Dashboard() {
             <div className="stat-content">
               <h3>Total Purchases</h3>
               <p className="stat-value">{stats.totalPurchases}</p>
-              <span className="stat-change">{stats.totalViews > 0 ? ((stats.totalPurchases / stats.totalViews) * 100).toFixed(1) : '0'}% of viewers</span>
+              <span className="stat-change">Last 7 days: {purchases7d}</span>
             </div>
           </div>
         </div>

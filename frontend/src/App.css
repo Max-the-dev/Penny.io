@@ -2041,6 +2041,12 @@ main {
   color: white;
 }
 
+.network-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
 /* Donation Amount Selection */
 .donation-amounts {
   display: flex;
@@ -2746,6 +2752,28 @@ main {
 .tip-amount-input:focus {
   outline: none;
   border-color: #00ba7c;
+}
+
+.tip-network-selector {
+  margin-bottom: 24px;
+}
+
+.tip-network-selector label {
+  display: block;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.tip-network-options {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tip-network-options .network-option {
+  flex: 1;
+  min-width: 120px;
 }
 
 .tip-submit-button {

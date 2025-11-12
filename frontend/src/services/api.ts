@@ -92,6 +92,10 @@ export interface GetArticlesQuery {
   categories?: string[];
 }
 
+export interface AuthorStats {
+  purchases7d: number;
+}
+
 class ApiService {
   private async request<T>(
     endpoint: string,
@@ -238,7 +242,14 @@ class ApiService {
     });
   }
 
+  // Author stats endpoints 
+  async getAuthorStats(address: string): Promise<ApiResponse<AuthorStats>> {
+    return this.request<AuthorStats>(`/authors/${address}/stats`);
+  }
+
 }
+
+
 
 export const apiService = new ApiService();
 export default apiService;

@@ -45,6 +45,7 @@ function Article() {
   const [tipResult, setTipResult] = useState<{ success: boolean; message: string; txHash?: string } | null>(null);
   const [authorNetworks, setAuthorNetworks] = useState<SupportedAuthorNetwork[]>(['base']);
   const [selectedNetworkFamily, setSelectedNetworkFamily] = useState<'base' | 'solana'>('base');
+  const [selectedTipNetworkFamily, setSelectedTipNetworkFamily] = useState<'base' | 'solana'>('base');
   const [authorWallets, setAuthorWallets] = useState<AuthorWallet[]>([]);
   const [isPaymentStatusLoaded, setIsPaymentStatusLoaded] = useState(false);
 
@@ -79,9 +80,14 @@ function Article() {
     return Array.from(families);
   }, [authorNetworks]);
 
+  const isTipNetworkReady = selectedTipNetworkFamily === 'solana'
+    ? Boolean(solanaSigner)
+    : Boolean(isConnected && walletClient);
+
   useEffect(() => {
     if (!availableNetworkFamilies.length) {
       setSelectedNetworkFamily('base');
+      setSelectedTipNetworkFamily('base');
       return;
     }
     if (!availableNetworkFamilies.includes(selectedNetworkFamily)) {
@@ -89,7 +95,12 @@ function Article() {
         availableNetworkFamilies.includes('base') ? 'base' : availableNetworkFamilies[0]
       );
     }
-  }, [availableNetworkFamilies, selectedNetworkFamily]);
+    if (!availableNetworkFamilies.includes(selectedTipNetworkFamily)) {
+      setSelectedTipNetworkFamily(
+        availableNetworkFamilies.includes('base') ? 'base' : availableNetworkFamilies[0]
+      );
+    }
+  }, [availableNetworkFamilies, selectedNetworkFamily, selectedTipNetworkFamily]);
 
   const formatSupportedNetworks = (networks: SupportedAuthorNetwork[]): string => {
     const families = new Set(networks.map(net => getNetworkFamily(net)));
@@ -311,15 +322,15 @@ function Article() {
       return;
     }
 
-    const isSolanaSelected = selectedNetworkFamily === 'solana';
-    const selectedNetwork: SupportedNetwork = isSolanaSelected ? resolvedSolanaNetwork : getNetworkFromChain(chain?.id);
+    const isSolanaTip = selectedTipNetworkFamily === 'solana';
+    const selectedNetwork: SupportedNetwork = isSolanaTip ? resolvedSolanaNetwork : getNetworkFromChain(chain?.id);
 
-    if (isSolanaSelected && !solanaSigner) {
+    if (isSolanaTip && !solanaSigner) {
       setTipResult({ success: false, message: 'Please connect a Solana wallet to tip' });
       return;
     }
 
-    if (!isSolanaSelected && (!isConnected || !walletClient)) {
+    if (!isSolanaTip && (!isConnected || !walletClient)) {
       setTipResult({ success: false, message: 'Please connect a wallet to tip' });
       return;
     }
@@ -333,8 +344,8 @@ function Article() {
         amount,
         {
           network: selectedNetwork,
-          evmWalletClient: !isSolanaSelected ? walletClient ?? undefined : undefined,
-          solanaSigner: isSolanaSelected ? solanaSigner : undefined,
+          evmWalletClient: !isSolanaTip ? walletClient ?? undefined : undefined,
+          solanaSigner: isSolanaTip ? solanaSigner : undefined,
         }
       );
 
@@ -573,6 +584,14 @@ function Article() {
               onClick={() => {
                 setShowTipModal(true);
                 setHasTipped(false); // Reset tip success state when opening modal
+                setSelectedTipAmount(null);
+                setCustomTipAmount('');
+                setTipResult(null);
+                setSelectedTipNetworkFamily(
+                  availableNetworkFamilies.includes(selectedNetworkFamily)
+                    ? selectedNetworkFamily
+                    : availableNetworkFamilies[0] || 'base'
+                );
               }}
               title="Tip the author"
             >
@@ -631,12 +650,38 @@ function Article() {
                     className="tip-amount-input"
                   />
                 </div>
+
+                {availableNetworkFamilies.length > 0 && (
+                  <div className="tip-network-selector">
+                    <label>Choose network:</label>
+                    <div className="tip-network-options">
+                      {(['base', 'solana'] as const).map((family) => {
+                        const isSupported = availableNetworkFamilies.includes(family);
+                        return (
+                          <button
+                            key={family}
+                            type="button"
+                            className={`network-option ${selectedTipNetworkFamily === family ? 'active' : ''} ${!isSupported ? 'disabled' : ''}`}
+                            onClick={() => isSupported && setSelectedTipNetworkFamily(family)}
+                            disabled={!isSupported}
+                          >
+                            {family === 'solana' ? 'Solana' : 'Base'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 
                 <div className="tip-modal-actions">
                   <button
                     className="tip-submit-button"
                     onClick={handleTip}
-                    disabled={isProcessingTip || !isConnected || (!selectedTipAmount && !customTipAmount)}
+                    disabled={
+                      isProcessingTip ||
+                      !isTipNetworkReady ||
+                      (!selectedTipAmount && !customTipAmount)
+                    }
                   >
                     {isProcessingTip ? 'Processing...' : `Send Tip $${(selectedTipAmount || parseFloat(customTipAmount) || 0).toFixed(2)}`}
                   </button>
