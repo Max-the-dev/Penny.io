@@ -10,9 +10,18 @@ function Header() {
           <h1>Penny.io</h1>
         </Link>
         <nav className="nav">
-          <Link to="/explore" className="nav-link"><BookOpen size={16}/>Explore</Link>
-          <Link to="/write" className="nav-link"><PenTool size={16}/>Write</Link>
-          <Link to="/dashboard" className="nav-link"><LayoutDashboard size={16}/>Dashboard</Link>
+          <Link to="/explore" className="link">
+            <span className="link-icon"><BookOpen size={20}/></span>
+            <span className="link-title">Explore</span>
+          </Link>
+          <Link to="/write" className="link">
+            <span className="link-icon"><PenTool size={20}/></span>
+            <span className="link-title">Write</span>
+          </Link>
+          <Link to="/dashboard" className="link">
+            <span className="link-icon"><LayoutDashboard size={20}/></span>
+            <span className="link-title">Dashboard</span>
+          </Link>
           <AppKitConnectButton />
         </nav>
       </div>

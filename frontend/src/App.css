@@ -102,24 +102,84 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 0.5rem;
 }
 
-.nav-link {
+.link {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 50px;
+  height: 40px;
+  border-radius: 8px;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  transform-origin: center left;
+  transition: width 0.2s ease-in;
   text-decoration: none;
   color: #536471;
   font-weight: 500;
-  transition: color 0.2s ease;
-  padding: 8px 1px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 6px;
+  cursor: pointer;
 }
 
-.nav-link:hover {
-  color: #1a1a1a;
+.link::before {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  display: block;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  transform: translateX(100%);
+  transition: transform 0.2s ease-in;
+  transform-origin: center right;
   background-color: #f8f9fa;
+}
+
+.link:hover,
+.link:focus {
+  outline: 0;
+  width: 130px;
+  color: #1a1a1a;
+}
+
+.link:hover::before,
+.link:focus::before {
+  transform: translateX(0);
+}
+
+.link:hover .link-title,
+.link:focus .link-title {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.link-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
+  left: 15px;
+  position: absolute;
+}
+
+.link-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.link-title {
+  transform: translateX(100%);
+  transition: transform 0.2s ease-in, opacity 0.2s ease-in;
+  transform-origin: center right;
+  display: block;
+  text-align: center;
+  padding-left: 20px;
+  width: 100%;
+  opacity: 0;
+  font-size: 14px;
 }
 
 /* RainbowKit Custom Styling */
@@ -403,6 +463,37 @@ main {
   min-height: calc(100vh - 64px);
 }
 
+/* Hero + Grid Section Container */
+.hero-grid-section {
+  position: relative;
+  background-color: #f8fafc;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+.hero-grid-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+    linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+  background-size: 20px 30px;
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 60% at 100% 50%,
+    #000 60%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 70% 60% at 100% 50%,
+    #000 60%,
+    transparent 100%
+  );
+}
+
 /* Hero Section */
 .hero {
   text-align: center;
@@ -410,6 +501,8 @@ main {
   max-width: 680px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-content {
@@ -465,88 +558,92 @@ main {
   text-align: center;
 }
 
-/* Typing CTA Section */
+/* Typing CTA Section - Modern Redesign */
 .typing-cta-section {
-  padding: 0 0 20px 0;
+  padding: 40px 0;
   margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .typing-cta-wrapper {
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-}
-
-.typing-cta-container {
-  display: flex;
-  align-items: stretch;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e1e8ed;
-  overflow: hidden;
-  width: 380px;
-}
-
-.logo-section {
-  background-color: #e2e8f0;
-  padding: 12px 16px;
-  border-right: 1px solid #cbd5e1;
-  display: flex;
-  align-items: center;
-  min-width: 50px;
-}
-
-.typing-prefix {
-  color: #1a1a1a;
-  font-weight: 600;
-  font-size: 0.875rem;
+  gap: 32px;
+  position: relative;
+  z-index: 1;
 }
 
 .typing-text-box {
-  flex: 1;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 2rem;
+  font-weight: 700;
   color: #1a1a1a;
-  min-height: 28px;
+  min-height: 60px;
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  justify-content: center;
   white-space: nowrap;
 }
-
 
 .typing-text {
   color: #1a1a1a;
   position: relative;
+  letter-spacing: -0.02em;
+  text-align: center;
 }
 
 .cursor {
   animation: blink 1s infinite;
-  color: #3b82f6;
+  color: #1a1a1a;
   font-weight: 400;
+  margin-left: 2px;
 }
 
 .cta-simple-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background-color: #1a1a1a;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
   color: white;
-  padding: 10px 16px;
-  border-radius: 6px;
+  padding: 14px 28px;
+  border-radius: 12px;
   text-decoration: none;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
   white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(26, 26, 26, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-simple-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.cta-simple-button:hover::before {
+  left: 100%;
 }
 
 .cta-simple-button:hover {
-  background-color: #2a2a2a;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26, 26, 26, 0.3);
+}
+
+.cta-simple-button:active {
+  transform: translateY(0);
 }
 
 @keyframes blink {
@@ -566,9 +663,44 @@ main {
 
 .featured-articles h2 {
   font-size: 2rem;
+  color: #1a1a1a;
+  font-family: inherit;
   font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  border: none;
+  background: none;
+  text-transform: uppercase;
+  transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-duration: 400ms;
+  transition-property: color;
   margin-bottom: 32px;
   text-align: center;
+}
+
+.featured-articles h2:focus,
+.featured-articles h2:hover {
+  color: #4a4a4a;
+}
+
+.featured-articles h2:focus:after,
+.featured-articles h2:hover:after {
+  width: 100%;
+  left: 0%;
+}
+
+.featured-articles h2:after {
+  content: "";
+  pointer-events: none;
+  bottom: -2px;
+  left: 50%;
+  position: absolute;
+  width: 0%;
+  height: 2px;
+  background-color: #1a1a1a;
+  transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-duration: 400ms;
+  transition-property: width, left;
 }
 
 .article-grid {
@@ -921,6 +1053,151 @@ main {
 
 .wallet-info p {
   margin: 4px 0;
+}
+
+.wallet-info-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px 20px;
+  min-width: 320px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wallet-info-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.wallet-label.small {
+  font-size: 0.75rem;
+}
+
+.wallet-address {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.wallet-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5f5;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wallet-manage-btn svg {
+  color: #0f172a;
+}
+
+.wallet-manage-btn:hover {
+  background: #e2e8f0;
+}
+
+.wallet-secondary {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed #dee6f5;
+  color: #475569;
+}
+
+.wallet-secondary.placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.wallet-form {
+  border-top: 1px solid #e9eef8;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wallet-form input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.wallet-form input:focus {
+  outline: none;
+  border-color: #1a1a1a;
+}
+
+.wallet-input-error {
+  color: #b91c1c;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.wallet-form-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wallet-cancel-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wallet-status {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.wallet-status.error {
+  color: #b91c1c;
+}
+
+.wallet-status.success {
+  color: #0f9d58;
+}
+
+@media (max-width: 768px) {
+  .wallet-info-card {
+    width: 100%;
+  }
+
+  .wallet-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wallet-manage-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Enhanced Wallet Info Section */
@@ -1806,135 +2083,162 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 24px;
+  margin-bottom: 8px;
   position: relative;
 }
 
-/* x402 Validation Button (Green) */
+/* x402 Validation Button - Crosshair Style */
 .x402-validation-button {
+  position: relative;
+  height: 42px;
+  padding: 0 24px;
+  border: 2px solid #000;
+  background: #f8f9fa;
+  user-select: none;
+  white-space: nowrap;
+  transition: all .05s linear;
+  font-family: inherit;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
+  gap: 6px;
   text-decoration: none;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
-  overflow: hidden;
-  width: 44px;
-  height: 44px;
-  padding-left: 12px;
-  flex-shrink: 0;
-  position: relative;
+  color: #000;
 }
 
-.x402-validation-button .button-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.x402-validation-button::before,
+.x402-validation-button::after {
+  content: "";
+  position: absolute;
+  background: #f8f9fa;
+  transition: all .2s linear;
 }
 
-.x402-validation-button .button-icon svg {
-  width: 20px;
-  height: 20px;
+.x402-validation-button::before {
+  width: calc(100% + 6px);
+  height: calc(100% - 16px);
+  top: 8px;
+  left: -3px;
 }
 
-.x402-validation-button .button-text {
-  max-width: 0;
-  opacity: 0;
-  white-space: nowrap;
-  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  margin-left: 0;
+.x402-validation-button::after {
+  width: calc(100% - 16px);
+  height: calc(100% + 6px);
+  top: -3px;
+  left: 8px;
 }
 
 .x402-validation-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(16, 185, 129, 0.3);
-  width: auto;
-  padding-left: 12px;
-  padding-right: 18px;
-}
-
-.x402-validation-button:hover .button-text {
-  max-width: 200px;
-  opacity: 1;
-  margin-left: 8px;
+  cursor: pointer;
 }
 
 .x402-validation-button:active {
-  transform: translateY(0);
+  transform: scale(0.95);
 }
 
-/* Donate Button (Blue/Purple) */
-.donate-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
-  overflow: hidden;
-  width: 44px;
-  height: 44px;
-  padding-left: 12px;
-  flex-shrink: 0;
+.x402-validation-button:hover::before {
+  height: calc(100% - 32px);
+  top: 16px;
+}
+
+.x402-validation-button:hover::after {
+  width: calc(100% - 32px);
+  left: 16px;
+}
+
+.x402-validation-button .button-icon {
+  z-index: 3;
   position: relative;
-}
-
-.donate-button .button-icon {
-  width: 20px;
-  height: 20px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
-.donate-button .button-icon svg {
-  width: 20px;
-  height: 20px;
+.x402-validation-button .button-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
-.donate-button .button-text {
-  max-width: 0;
-  opacity: 0;
+.x402-validation-button .button-text {
+  font-size: 14px;
+  z-index: 3;
+  position: relative;
+  font-weight: 600;
+}
+
+/* Donate Button - Crosshair Style */
+.donate-button {
+  position: relative;
+  height: 42px;
+  padding: 0 24px;
+  border: 2px solid #000;
+  background: #f8f9fa;
+  user-select: none;
   white-space: nowrap;
-  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  margin-left: 0;
+  transition: all .05s linear;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #000;
+}
+
+.donate-button::before,
+.donate-button::after {
+  content: "";
+  position: absolute;
+  background: #f8f9fa;
+  transition: all .2s linear;
+}
+
+.donate-button::before {
+  width: calc(100% + 6px);
+  height: calc(100% - 16px);
+  top: 8px;
+  left: -3px;
+}
+
+.donate-button::after {
+  width: calc(100% - 16px);
+  height: calc(100% + 6px);
+  top: -3px;
+  left: 8px;
 }
 
 .donate-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.3);
-  width: auto;
-  padding-left: 12px;
-  padding-right: 18px;
-}
-
-.donate-button:hover .button-text {
-  max-width: 200px;
-  opacity: 1;
-  margin-left: 8px;
+  cursor: pointer;
 }
 
 .donate-button:active {
-  transform: translateY(0);
+  transform: scale(0.95);
+}
+
+.donate-button:hover::before {
+  height: calc(100% - 32px);
+  top: 16px;
+}
+
+.donate-button:hover::after {
+  width: calc(100% - 32px);
+  left: 16px;
+}
+
+.donate-button .button-icon {
+  z-index: 3;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.donate-button .button-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.donate-button .button-text {
+  font-size: 14px;
+  z-index: 3;
+  position: relative;
+  font-weight: 600;
 }
 
 /* Donation Modal Overlay */ 
@@ -7609,25 +7913,93 @@ main {
   border-top: 1px solid #e1e8ed;
 }
 
-.explore-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 32px;
-  background: #1a1a1a;
-  color: white;
+.fancy {
+  background-color: transparent;
+  border: 2px solid #000;
+  border-radius: 0;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  float: none;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin: 0;
+  outline: none;
+  overflow: visible;
+  padding: 1.25em 2em;
+  position: relative;
+  text-align: center;
   text-decoration: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-transform: none;
+  transition: all 0.3s ease-in-out;
+  user-select: none;
+  font-size: 13px;
 }
 
-.explore-button:hover {
-  background: #333;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.fancy .text {
+  font-size: 1.125em;
+  line-height: 1.33333em;
+  padding-left: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  transition: all 0.3s ease-in-out;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: black;
+}
+
+.fancy .top-key {
+  height: 2px;
+  width: 1.5625rem;
+  top: -2px;
+  left: 0.625rem;
+  position: absolute;
+  background: #e8e8e8;
+  transition: width 0.5s ease-out, left 0.3s ease-out;
+}
+
+.fancy .bottom-key-1 {
+  height: 2px;
+  width: 1.5625rem;
+  right: 1.875rem;
+  bottom: -2px;
+  position: absolute;
+  background: #e8e8e8;
+  transition: width 0.5s ease-out, right 0.3s ease-out;
+}
+
+.fancy .bottom-key-2 {
+  height: 2px;
+  width: 0.625rem;
+  right: 0.625rem;
+  bottom: -2px;
+  position: absolute;
+  background: #e8e8e8;
+  transition: width 0.5s ease-out, right 0.3s ease-out;
+}
+
+.fancy:hover {
+  color: white;
+  background: black;
+}
+
+.fancy:hover .text {
+  color: white;
+  padding-left: 0;
+}
+
+.fancy:hover .top-key {
+  left: -2px;
+  width: 0px;
+}
+
+.fancy:hover .bottom-key-1,
+.fancy:hover .bottom-key-2 {
+  right: 0;
+  width: 0;
 }
 
 @media (max-width: 768px) {
@@ -7635,10 +8007,15 @@ main {
     margin-top: 32px;
     padding-top: 32px;
   }
-  
-  .explore-button {
-    padding: 14px 24px;
-    font-size: 15px;
+
+  .fancy {
+    padding: 1em 1.5em;
+    font-size: 12px;
+  }
+
+  .fancy .text {
+    font-size: 1em;
+    gap: 8px;
   }
 }
 

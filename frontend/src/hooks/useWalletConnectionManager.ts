@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAppKitAccount, useAppKitState, useDisconnect } from '@reown/appkit/react';
+import { modal } from '../appkit';
 
 /**
  * Wallet Connection Manager Hook
@@ -51,28 +52,32 @@ export function useWalletConnectionManager() {
 
   // Track previous address to detect account switches
   const [prevAddress, setPrevAddress] = useState<string | undefined>(undefined);
-  const isReloadingRef = useRef(false);
+  const hasSubscribedRef = useRef(false);
+
+  // Subscribe to AppKit account changes using the modal instance
+  useEffect(() => {
+    if (hasSubscribedRef.current) return;
+    hasSubscribedRef.current = true;
+
+    const unsubscribe = modal.subscribeAccount((state: any) => {
+      console.log('AppKit account state change:', state);
+
+      // If address changed while connected, reload to sync state
+      if (state.isConnected && state.address && prevAddress && prevAddress !== state.address) {
+        console.log('Account switched detected:', prevAddress, '->', state.address);
+        console.log('Reloading to sync with new wallet...');
+        window.location.reload();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [prevAddress]);
 
   // When connection state changes
   useEffect(() => {
-    // Don't process state changes if we're already reloading
-    if (isReloadingRef.current) return;
-
     if (isConnected && address) {
-      // Check if account switched (address changed while staying connected)
-      if (prevAddress && prevAddress !== address) {
-        console.log('Account switched via AppKit detected:', prevAddress, '->', address);
-        // Mark that we're reloading to prevent further state updates
-        isReloadingRef.current = true;
-        // Wait 2 seconds for AppKit to fully persist the new wallet before reloading
-        console.log('Waiting 2s for AppKit to persist wallet switch...');
-        setTimeout(() => {
-          console.log('Reloading to sync with new wallet...');
-          window.location.reload();
-        }, 2000);
-        return;
-      }
-
       // User is connected - ensure disconnect flag is cleared
       localStorage.removeItem(DISCONNECT_FLAG_KEY);
       console.log('Wallet connected:', address);
@@ -91,7 +96,7 @@ export function useWalletConnectionManager() {
       console.log('Wallet disconnected - set prevent reconnect flag');
       setPrevAddress(undefined);
     }
-  }, [isConnected, address, prevAddress]);
+  }, [isConnected, address]);
 
   // Listen for MetaMask account changes
   useEffect(() => {

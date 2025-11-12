@@ -28,7 +28,7 @@ const solanaAdapter = new SolanaAdapter({
 
 
 
-createAppKit({
+const modal = createAppKit({
   projectId,
   adapters: [wagmiAdapter, solanaAdapter],
   networks,
@@ -50,4 +50,4 @@ createAppKit({
   allWallets: 'SHOW',
 });
 
-export { wagmiAdapter };
+export { wagmiAdapter, modal };

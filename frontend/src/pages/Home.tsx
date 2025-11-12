@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { PenTool, BookOpen, BookType } from 'lucide-react';
+import { PenTool, BookOpen } from 'lucide-react';
 import { apiService, Article } from '../services/api';
+import PennyPenIcon from '../components/PennyPenIcon';
 
 // We'll fetch real articles from the backend instead of using mock data
 
@@ -77,38 +78,35 @@ function Home() {
 
   return (
     <div className="home">
-      <div className="hero">
-        <div className="hero-content">
-          <div className="hero-meta">
-            <span className="hero-powered-label">Powered by</span>
-            <span className="hero-powered-brand">Coinbase x402</span>
-          </div>
-          <h1>Content Monetization Reimagined</h1>
-          <p className="hero-subtitle" style={{fontSize: '15px'}}>
-            Readers: Pay only for what you read—no subscriptions, no ads. 
-            <br></br> 
-            Authors: Receive 100% of revenue directly into your wallet.
-          </p>
-        </div>
-      </div>
-      
-      <div className="typing-cta-section">
-        <div className="typing-cta-wrapper">
-          <div className="typing-cta-container">
-            <div className="logo-section">
-              <span className="typing-prefix"><BookType size={18}></BookType></span>
+      <div className="hero-grid-section">
+        <div className="hero">
+          <div className="hero-content">
+            <div className="hero-meta">
+              <span className="hero-powered-label">Powered by</span>
+              <span className="hero-powered-brand">Coinbase x402</span>
             </div>
+            <h1>Content Monetization Reimagined</h1>
+            <p className="hero-subtitle" style={{fontSize: '15px'}}>
+              Readers: Pay only for what you read—no subscriptions, no ads.
+              <br></br>
+              Authors: Receive 100% of revenue directly into your wallet.
+            </p>
+          </div>
+        </div>
+
+        <div className="typing-cta-section">
+          <div className="typing-cta-wrapper">
             <div className="typing-text-box">
               <span className="typing-text">
                 {displayText}
                 <span className="cursor">|</span>
               </span>
             </div>
+            <Link to="/write" className="cta-simple-button">
+              <PenTool size={18} />
+              Start Writing
+            </Link>
           </div>
-          <Link to="/write" className="cta-simple-button">
-            <PenTool size={18} />
-            Start Writing
-          </Link>
         </div>
       </div>
       
@@ -149,9 +147,14 @@ function Home() {
         
         {/* Explore All Articles Button */}
         <div className="explore-cta">
-          <Link to="/explore" className="explore-button">
-            <BookOpen size={20} />
-            Explore All Articles
+          <Link to="/explore" className="fancy">
+            <span className="top-key"></span>
+            <span className="text">
+              <BookOpen size={20} />
+              Explore All Articles
+            </span>
+            <span className="bottom-key-1"></span>
+            <span className="bottom-key-2"></span>
           </Link>
         </div>
       </div>

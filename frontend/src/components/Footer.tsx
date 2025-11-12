@@ -145,7 +145,7 @@ function Footer() {
         <div className="footer-content">
           <div className="footer-section">
             <h3>Penny.io</h3>
-            <p>Micropayments for quality content</p>
+            <p>Content Monetization Reimagined</p>
             {/* Action Buttons */}
             <div className="footer-actions">
               <Link to="/x402-test" className="x402-validation-button">

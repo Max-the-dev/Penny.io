@@ -2,10 +2,50 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import AppKitConnectButton from '../components/AppKitConnectButton';
 import { Link, useNavigate } from 'react-router-dom';
-import { DollarSign, Eye, Users, Edit3, LayoutDashboard, Search, Filter, X, Book, Trash2, Edit, FileText, Clock } from 'lucide-react';
+import {
+  DollarSign,
+  Eye,
+  Users,
+  Edit3,
+  LayoutDashboard,
+  Search,
+  Filter,
+  X,
+  Book,
+  Trash2,
+  Edit,
+  FileText,
+  Clock,
+  PlusCircle,
+  CheckCircle,
+} from 'lucide-react';
 import { isDateWithinRange, getRelativeTimeString } from '../utils/dateUtils';
 import { extractPlainText } from '../utils/htmlUtils';
-import { apiService, Article, Author, Draft, CreateArticleRequest } from '../services/api';
+import {
+  apiService,
+  Article,
+  Author,
+  Draft,
+  CreateArticleRequest,
+  SupportedAuthorNetwork,
+} from '../services/api';
+import { PublicKey } from '@solana/web3.js';
+import { isAddress as isEvmAddress } from 'viem';
+
+
+type NetworkFamily = 'base' | 'solana';
+
+const truncateAddress = (value?: string | null) => {
+  if (!value) return '—';
+  return `${value.slice(0, 6)}...${value.slice(-4)}`;
+};
+
+const getNetworkFamily = (network?: SupportedAuthorNetwork | null): NetworkFamily => {
+  if (!network) return 'base';
+  return network.includes('solana') ? 'solana' : 'base';
+};
+
+const getNetworkLabel = (family: NetworkFamily) => (family === 'solana' ? 'Solana' : 'Base');
 
 
 function Dashboard() {
@@ -55,6 +95,13 @@ function Dashboard() {
   const [draftConfirmPublish, setDraftConfirmPublish] = useState<Draft | null>(null);
   const [isDeletingDraft, setIsDeletingDraft] = useState(false);
   const [isPublishingDraft, setIsPublishingDraft] = useState(false);
+  const [purchases7d, setPurchases7d] = useState(0);
+  const [showPayoutForm, setShowPayoutForm] = useState(false);
+  const [secondaryAddressInput, setSecondaryAddressInput] = useState('');
+  const [payoutStatus, setPayoutStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isSavingPayout, setIsSavingPayout] = useState(false);
+
+  const [secondaryAddressError, setSecondaryAddressError] = useState('');
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,8 +109,6 @@ function Dashboard() {
   const [sortBy, setSortBy] = useState('date'); // date, title, price, earnings, views
   const [dateFilter, setDateFilter] = useState('all'); // all, week, month, quarter
   const [categoryFilter, setCategoryFilter] = useState('all'); // all, or specific category
-
-  const [purchases7d, setPurchases7d] = useState(0);
 
   // Fetch articles and author data on component mount and when address changes
   useEffect(() => {
@@ -74,6 +119,7 @@ function Dashboard() {
     } else {
       setArticles([]);
       setAuthor(null);
+      setPurchases7d(0);
       setLoading(false);
     }
   }, [isConnected, address]);
@@ -140,8 +186,9 @@ function Dashboard() {
 
   const fetchPurchaseStats = async () => {
     if (!address) return;
+
     try {
-      const response = await apiService.getAuthorStats(address);
+      const response = await apiService.getAuthorPurchaseStats(address);
       if (response.success && response.data) {
         setPurchases7d(response.data.purchases7d);
       }
@@ -149,6 +196,7 @@ function Dashboard() {
       console.error('Error fetching purchase stats:', error);
     }
   };
+
 
   const loadDraftsForModal = async () => {
     if (!address) return;
@@ -337,11 +385,7 @@ function Dashboard() {
     return true;
   });
 
-  const purchasesLast7Days = articles.reduce((sum, article) =>
-    isDateWithinRange(article.publishDate, 'week') ? sum + (article.purchases || 0) : sum,
-  0);
-
-  // Calculate stats from author data (lifetime totals) and derived short-term metrics
+  // Calculate stats from author data (lifetime totals)
   const stats = {
     totalEarnings: author?.totalEarnings || 0,
     totalArticles: author?.totalArticles || 0,
@@ -350,8 +394,99 @@ function Dashboard() {
     avgEarningsPerArticle: (author?.totalArticles || 0) > 0 
       ? (author?.totalEarnings || 0) / (author?.totalArticles || 0)
       : 0,
-    purchasesLast7Days,
   };
+
+  const primaryNetworkFamily = getNetworkFamily(author?.primaryPayoutNetwork);
+  const secondaryWalletExists = Boolean(author?.secondaryPayoutAddress && author?.secondaryPayoutNetwork);
+  const complementaryNetworkFamily: NetworkFamily = primaryNetworkFamily === 'solana' ? 'base' : 'solana';
+  const secondaryNetworkApiValue: SupportedAuthorNetwork =
+    complementaryNetworkFamily === 'solana' ? 'solana' : 'base';
+  const secondaryDisplayFamily: NetworkFamily = secondaryWalletExists
+    ? getNetworkFamily(author?.secondaryPayoutNetwork)
+    : complementaryNetworkFamily;
+
+  const validateSecondaryAddress = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return 'Address is required.';
+    }
+    if (complementaryNetworkFamily === 'base') {
+      if (!isEvmAddress(trimmed)) {
+        return 'Enter a valid Base (EVM) address.';
+      }
+    } else {
+      try {
+        new PublicKey(trimmed);
+      } catch {
+        return 'Enter a valid Solana address.';
+      }
+    }
+    return '';
+  };
+
+  const handleSaveSecondaryPayout = async () => {
+    if (!address) {
+      setPayoutStatus({ type: 'error', message: 'Connect your wallet to add a payout method.' });
+      return;
+    }
+
+    const trimmed = secondaryAddressInput.trim();
+    const validationError = validateSecondaryAddress(trimmed);
+    if (validationError) {
+      setSecondaryAddressError(validationError);
+      setPayoutStatus(null);
+      return;
+    }
+    setSecondaryAddressError('');
+
+    setIsSavingPayout(true);
+    setPayoutStatus(null);
+
+    try {
+      const response = await apiService.addSecondaryPayoutMethod(address, {
+        network: secondaryNetworkApiValue,
+        payoutAddress: trimmed,
+      });
+
+      if (response.success && response.data) {
+        setAuthor(response.data);
+        setShowPayoutForm(false);
+        setSecondaryAddressInput('');
+      } else {
+        setPayoutStatus({ type: 'error', message: response.error || 'Failed to save payout method.' });
+      }
+    } catch (error: any) {
+      const message = error?.message || 'Failed to save payout method.';
+      if (message.toLowerCase().includes('already linked')) {
+        setPayoutStatus({
+          type: 'error',
+          message: 'This wallet is already linked to another profile. Contact support to merge accounts.',
+        });
+      } else if (message.toLowerCase().includes('network already configured')) {
+        setPayoutStatus({
+          type: 'error',
+          message: 'You already have a wallet on this network. Remove it before adding another.',
+        });
+      } else {
+        setPayoutStatus({
+          type: 'error',
+          message,
+        });
+      }
+
+      // If the backend returned a validation-style error, surface it near the input
+      const backendAddressError =
+        message.includes('valid Base') || message.includes('valid Solana') ? message : '';
+      if (backendAddressError) {
+        setSecondaryAddressError(backendAddressError);
+      }
+    } finally {
+      setIsSavingPayout(false);
+    }
+  };
+
+  const canSaveSecondary =
+    !secondaryAddressError && secondaryAddressInput.trim().length > 0;
 
   // Clear search and filters function
   const clearSearch = () => {
@@ -383,10 +518,98 @@ function Dashboard() {
     <div className="dashboard">
       <div className="container">
         <div className="dashboard-header">
-          <h1> <LayoutDashboard size={25}/> Writer Dashboard</h1>
-          <div className="wallet-info">
-            <p><strong>Address:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}</p>
-          </div>
+          <h1>
+            <LayoutDashboard size={25} /> Writer Dashboard
+          </h1>
+          {author && (
+            <div className="wallet-info-card">
+              <div className="wallet-info-row">
+                <div>
+                  <p className="wallet-label">Primary wallet • {getNetworkLabel(primaryNetworkFamily)}</p>
+                  <p className="wallet-address">{truncateAddress(author.address || address)}</p>
+                </div>
+                <button
+                  type="button"
+                  className="wallet-manage-btn"
+                  onClick={() => {
+                    setShowPayoutForm(prev => !prev);
+                    setPayoutStatus(null);
+                    setSecondaryAddressInput(author.secondaryPayoutAddress || '');
+                    setSecondaryAddressError('');
+                  }}
+                >
+                  {author.secondaryPayoutAddress ? (
+                    <>
+                      <CheckCircle size={16} /> Manage payout methods
+                    </>
+                  ) : (
+                    <>
+                      <PlusCircle size={16} /> Add secondary wallet
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className={`wallet-secondary ${author.secondaryPayoutAddress ? '' : 'placeholder'}`}>
+                {author.secondaryPayoutAddress ? (
+                  <>
+                    <span className="wallet-label">Secondary wallet • {getNetworkLabel(secondaryDisplayFamily)}</span>
+                    <p className="wallet-address">{truncateAddress(author.secondaryPayoutAddress)}</p>
+                  </>
+                ) : (
+                  <span>No secondary wallet connected yet.</span>
+                )}
+              </div>
+              {showPayoutForm && (
+                <div className="wallet-form">
+                  <p className="wallet-label small">
+                    Secondary network • {getNetworkLabel(complementaryNetworkFamily)}
+                  </p>
+                  <input
+                    type="text"
+                    placeholder={`Enter ${getNetworkLabel(complementaryNetworkFamily)} wallet address`}
+                    value={secondaryAddressInput}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setSecondaryAddressInput(nextValue);
+                      if (secondaryAddressError) {
+                        setSecondaryAddressError(validateSecondaryAddress(nextValue));
+                      }
+                    }}
+                  />
+                  {secondaryAddressError && (
+                    <p className="wallet-input-error">{secondaryAddressError}</p>
+                  )}
+                  {payoutStatus && (
+                    <div className={`wallet-status ${payoutStatus.type}`}>
+                      {payoutStatus.message}
+                    </div>
+                  )}
+                  <div className="wallet-form-actions">
+                    <button
+                      type="button"
+                      className="tip-submit-button"
+                      onClick={handleSaveSecondaryPayout}
+                      disabled={isSavingPayout || !canSaveSecondary}
+                    >
+                      {isSavingPayout ? 'Saving...' : 'Save wallet'}
+                    </button>
+                    <button
+                      type="button"
+                      className="wallet-cancel-btn"
+                      onClick={() => {
+                        setShowPayoutForm(false);
+                        setPayoutStatus(null);
+                        setSecondaryAddressInput('');
+                        setSecondaryAddressError('');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Main Stats Grid */}
@@ -420,7 +643,7 @@ function Dashboard() {
             <div className="stat-content">
               <h3>Total Views</h3>
               <p className="stat-value">{stats.totalViews.toLocaleString()}</p>
-              <span className="stat-change">Conversion rate {stats.totalViews > 0 ? ((stats.totalPurchases / stats.totalViews) * 100).toFixed(1) : '0'}%</span>
+              <span className="stat-change"> Rate: {stats.totalViews > 0 ? ((stats.totalPurchases / stats.totalViews) * 100).toFixed(1) : '0'}%</span>
             </div>
           </div>
           
@@ -431,7 +654,7 @@ function Dashboard() {
             <div className="stat-content">
               <h3>Total Purchases</h3>
               <p className="stat-value">{stats.totalPurchases}</p>
-              <span className="stat-change">Last 7 days: {purchases7d}</span>
+              <span className="stat-change">This week: {purchases7d}</span>
             </div>
           </div>
         </div>
@@ -495,7 +718,7 @@ function Dashboard() {
                 className={`filter-button ${showFilters ? 'active' : ''}`}
                 onClick={() => setShowFilters(!showFilters)}
               >
-                <Filter size={18} />
+                <Filter size={14} />
                 
               </button>
             </div>

@@ -48,6 +48,10 @@ export interface Author {
   wallets?: AuthorWallet[];
 }
 
+interface AuthorPurchaseStatsResponse {
+  purchases7d: number;
+}
+
 export interface CreateArticleRequest {
   title: string;
   content: string;
@@ -188,6 +192,20 @@ class ApiService {
     return this.request<Author>(`/authors/${address}`);
   }
 
+  async getAuthorPurchaseStats(address: string): Promise<ApiResponse<AuthorPurchaseStatsResponse>> {
+    return this.request<AuthorPurchaseStatsResponse>(`/authors/${address}/stats`);
+  }
+
+  async addSecondaryPayoutMethod(
+    address: string,
+    payload: { network: SupportedAuthorNetwork; payoutAddress: string }
+  ): Promise<ApiResponse<Author>> {
+    return this.request<Author>(`/authors/${address}/payout-methods`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
   // Health check
   async healthCheck(): Promise<ApiResponse<{ message: string; timestamp: string; version: string }>> {
     return this.request<{ message: string; timestamp: string; version: string }>('/health');
@@ -240,11 +258,6 @@ class ApiService {
       method: 'DELETE',
       body: JSON.stringify({ authorAddress }),
     });
-  }
-
-  // Author stats endpoints 
-  async getAuthorStats(address: string): Promise<ApiResponse<AuthorStats>> {
-    return this.request<AuthorStats>(`/authors/${address}/stats`);
   }
 
 }

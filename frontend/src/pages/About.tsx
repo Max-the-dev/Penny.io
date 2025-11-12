@@ -186,7 +186,7 @@ function About() {
           </p>
           <div className="cta-buttons">
             <a href="/write" className="cta-button primary">Start Writing</a>
-            <a href="/" className="cta-button secondary">Explore Articles</a>
+            <a href="/explore" className="cta-button secondary">Explore Articles</a>
           </div>
         </section>
       </div>

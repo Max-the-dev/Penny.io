@@ -296,8 +296,7 @@ function Explore() {
                   onClick={() => setShowFilters(!showFilters)}
                   className={`filter-toggle ${showFilters ? 'active' : ''}`}
                 >
-                  <Filter size={18} />
-                  Filters
+                  <Filter size={14} />
                 </button>
               </div>
 
