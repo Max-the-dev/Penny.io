@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import AppKitConnectButton from '../components/AppKitConnectButton';
-import { Save, Send, FileText, Clock, Eye, CheckCircle, X, AlertTriangle, Loader2, Check, Dot } from 'lucide-react';
+import { Save, Send, FileText, Clock, Eye, CheckCircle, X, AlertTriangle, Loader2, Check, Dot, ChevronDown, Search } from 'lucide-react';
 import { apiService, Draft, CreateArticleRequest } from '../services/api';
 import { Editor } from '@tinymce/tinymce-react';
 import { extractPlainText } from '../utils/htmlUtils';
@@ -10,33 +10,40 @@ import { extractPlainText } from '../utils/htmlUtils';
 function Write() {
   const { isConnected, address } = useWallet();
   const location = useLocation();
-  
-  // Available categories (must match backend validation schema exactly)
-  const availableCategories = [
-    // Tech (5)
-    'Technology',
-    'AI & Machine Learning',
-    'Web Development',
-    'Crypto & Blockchain',
-    'Security',
-    // Business (4)
-    'Business',
-    'Startup',
-    'Finance',
-    'Marketing',
-    // General Topics (11)
-    'Science',
-    'Health',
-    'Education',
-    'Politics',
-    'Sports',
-    'Entertainment',
-    'Gaming',
-    'Art & Design',
-    'Travel',
-    'Food',
-    'Other'
-  ];
+
+  // Category emojis for visual enhancement
+  const categoryEmojis: Record<string, string> = {
+    'Technology': '⚡',
+    'AI & Machine Learning': '🤖',
+    'Web Development': '💻',
+    'Crypto & Blockchain': '🔗',
+    'Security': '🔒',
+    'Business': '💼',
+    'Startup': '🚀',
+    'Finance': '📈',
+    'Marketing': '📣',
+    'Science': '🔬',
+    'Health': '🏥',
+    'Education': '📚',
+    'Politics': '🏛️',
+    'Sports': '⚽',
+    'Entertainment': '🎬',
+    'Gaming': '🎮',
+    'Art & Design': '🎨',
+    'Travel': '✈️',
+    'Food': '🍕',
+    'Other': '📌'
+  };
+
+  // Category groups for organized dropdown
+  const categoryGroups = {
+    'Tech': ['Technology', 'AI & Machine Learning', 'Web Development', 'Crypto & Blockchain', 'Security'],
+    'Business': ['Business', 'Startup', 'Finance', 'Marketing'],
+    'General': ['Science', 'Health', 'Education', 'Politics', 'Sports', 'Entertainment', 'Gaming', 'Art & Design', 'Travel', 'Food', 'Other']
+  };
+
+  // Price presets for quick selection
+  const pricePresets = [0.05, 0.10, 0.25, 0.50, 1.00];
 
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
@@ -52,6 +59,12 @@ function Write() {
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState<boolean>(false);
   const [activeDraftId, setActiveDraftId] = useState<number | null>(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState<boolean>(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState<string>('');
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const [publishedArticleId, setPublishedArticleId] = useState<number | null>(null);
+  const [publishedArticleTitle, setPublishedArticleTitle] = useState<string>('');
+
   // Content limits
   const MAX_TITLE_LENGTH = 200;
   const MIN_CONTENT_LENGTH = 50;
@@ -65,7 +78,7 @@ function Write() {
   const autoSaveTimeoutRef = useRef<number | null>(null);
   const suppressSubmitClearRef = useRef<boolean>(false);
   const autoLoadKeyRef = useRef<string | null>(null);
-  const handleSubmitRef = useRef<(event: FormEvent<HTMLFormElement>) => void | Promise<void>>();
+  const handleSubmitRef = useRef<((event: FormEvent<HTMLFormElement>) => void | Promise<void>) | undefined>(undefined);
   const autoSaveControllerRef = useRef<AbortController | null>(null);
 
   const clearAutoSaveTimers = useCallback(() => {
@@ -119,6 +132,59 @@ function Write() {
     }
   }, [displayText, hasTyped, fullText]);
 
+  // Price management functions
+  const handlePresetClick = (presetValue: number) => {
+    setPrice(presetValue.toFixed(2));
+    clearSubmitError();
+  };
+
+  const calculateEarnings = (priceValue: number, reads: number): string => {
+    const earnings = priceValue * reads;
+    return earnings.toFixed(2);
+  };
+
+  // Share functions
+  const getArticleUrl = () => {
+    if (!publishedArticleId) return '';
+    return `${window.location.origin}/article/${publishedArticleId}`;
+  };
+
+  const getShareText = () => {
+    return `Check out my Penny.io article: ${publishedArticleTitle}`;
+  };
+
+  const shareOnX = () => {
+    const url = getArticleUrl();
+    const text = getShareText();
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnFacebook = () => {
+    const url = getArticleUrl();
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnLinkedIn = () => {
+    const url = getArticleUrl();
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+  };
+
+  const shareOnThreads = () => {
+    const url = getArticleUrl();
+    const text = getShareText();
+    window.open(`https://threads.net/intent/post?text=${encodeURIComponent(`${text} ${url}`)}`, '_blank');
+  };
+
+  const copyArticleLink = async () => {
+    const url = getArticleUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      alert('Link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
   // Category management functions
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev => {
@@ -132,6 +198,33 @@ function Write() {
 
       return [...prev, category];
     });
+    clearSubmitError();
+  };
+
+  const removeCategory = (category: string) => {
+    setSelectedCategories(prev => prev.filter(c => c !== category));
+    clearSubmitError();
+  };
+
+  // Filter categories by search query
+  const getFilteredCategories = () => {
+    if (!categorySearchQuery.trim()) {
+      return categoryGroups;
+    }
+
+    const query = categorySearchQuery.toLowerCase();
+    const filtered: Record<string, string[]> = {};
+
+    Object.entries(categoryGroups).forEach(([groupName, categories]) => {
+      const matchingCategories = categories.filter(cat =>
+        cat.toLowerCase().includes(query)
+      );
+      if (matchingCategories.length > 0) {
+        filtered[groupName] = matchingCategories;
+      }
+    });
+
+    return filtered;
   };
 
   // Auto-save functionality
@@ -161,10 +254,10 @@ function Write() {
 
     autoSaveTimeoutRef.current = window.setTimeout(async () => {
       setIsAutoSaving(true);
+      const controller = new AbortController();
+      autoSaveControllerRef.current = controller;
+
       try {
-        autoSaveControllerRef.current?.abort();
-        const controller = new AbortController();
-        autoSaveControllerRef.current = controller;
         const now = new Date();
         const response = await apiService.saveDraft({
           title,
@@ -173,6 +266,7 @@ function Write() {
           authorAddress: address,
           isAutoSave: true
         }, { signal: controller.signal });
+
         if (response.success && response.data) {
           setActiveDraftId(response.data.id);
           upsertDraftInState(response.data);
@@ -180,12 +274,14 @@ function Write() {
         setLastAutoSaveAt(now);
       } catch (error) {
         if ((error as any)?.name === 'AbortError') {
-          console.log('Auto-save request aborted');
-        } else {
-          console.error('Auto-save failed:', error);
+          // Silently ignore - this is expected when user keeps typing
+          return;
         }
+        console.error('Auto-save failed:', error);
       } finally {
-        autoSaveControllerRef.current = null;
+        if (autoSaveControllerRef.current === controller) {
+          autoSaveControllerRef.current = null;
+        }
         setIsAutoSaving(false);
         autoSaveTimeoutRef.current = null;
       }
@@ -202,6 +298,24 @@ function Write() {
       loadDrafts();
     }
   }, [address]);
+
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+        setCategorySearchQuery('');
+      }
+    };
+
+    if (showCategoryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCategoryDropdown]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -300,12 +414,16 @@ function Write() {
 
       const response = await apiService.createArticle(articleData);
 
-      if (response.success) {
+      if (response.success && response.data) {
         suppressSubmitClearRef.current = true;
         if (draftIdToClear !== null) {
           setAvailableDrafts(prev => prev.filter(d => d.id !== draftIdToClear));
         }
         setActiveDraftId(null);
+
+        // Store published article info for success message
+        setPublishedArticleId(response.data.id);
+        setPublishedArticleTitle(title);
 
         // Clear current form
         setTitle('');
@@ -594,30 +712,106 @@ function Write() {
         <div className="write-layout">
           <form id="write-form" onSubmit={handleSubmit} className="write-form" noValidate>
             {/* Success Message */}
-            {submitSuccess && (
+            {submitSuccess && publishedArticleId && (
               <div className="submit-success">
                 <div className="success-icon">
                   <CheckCircle size={24} />
                 </div>
                 <div className="success-content">
                   <h4>Article Published Successfully! 🎉</h4>
-                  <p>Your article is now live and available for readers to discover. You'll earn <strong>${parseFloat(price).toFixed(2)}</strong> each time someone purchases and reads your article.</p>
+                  <p>Your article is now live and available for readers to discover.</p>
+
+                  {/* Share Section */}
+                  <div className="success-share-section">
+                    <div className="success-share-label">Share your article:</div>
+                    <div className="success-share-buttons">
+                      <button
+                        type="button"
+                        onClick={shareOnX}
+                        className="share-btn share-btn-x"
+                        title="Share on X"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        X
+                      </button>
+                      <button
+                        type="button"
+                        onClick={shareOnFacebook}
+                        className="share-btn share-btn-facebook"
+                        title="Share on Facebook"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        Facebook
+                      </button>
+                      <button
+                        type="button"
+                        onClick={shareOnLinkedIn}
+                        className="share-btn share-btn-linkedin"
+                        title="Share on LinkedIn"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                        LinkedIn
+                      </button>
+                      <button
+                        type="button"
+                        onClick={shareOnThreads}
+                        className="share-btn share-btn-threads"
+                        title="Share on Threads"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142l-.126 2.006c-.907-.123-1.819-.184-2.714-.184h-.008c-1.205.084-2.199.396-2.961.928-.75.523-1.08 1.14-1.039 1.941.042.812.43 1.42 1.090 1.763.571.297 1.273.426 2.092.384 1.07-.054 1.861-.465 2.429-1.27.453-.642.71-1.515.766-2.604a4.485 4.485 0 0 0-.48-.233c-.963-.403-2.237-.628-3.79-.667a8.556 8.556 0 0 0-2.414.244c-1.235.341-2.223.944-2.935 1.794-1.237 1.476-1.663 3.264-1.268 5.317.394 2.04 1.501 3.722 3.298 5.002 1.797 1.281 3.95 1.93 6.41 1.93 2.886-.024 5.347-1.021 7.313-2.966 1.966-1.945 2.97-4.51 2.985-7.627l-.003-.033c-.022-2.01-.647-3.746-1.856-5.16-1.209-1.415-2.92-2.353-5.082-2.79-.002 0-.002-.002-.002-.002z"/>
+                        </svg>
+                        Threads
+                      </button>
+                      <button
+                        type="button"
+                        onClick={copyArticleLink}
+                        className="share-btn share-btn-copy"
+                        title="Copy link"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                        </svg>
+                        Copy Link
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
                   <div className="success-actions">
+                    <a href={`/article/${publishedArticleId}`} className="action-btn view-btn">
+                      View Article
+                    </a>
                     <a href="/dashboard" className="action-btn secondary-btn">
-                      View in Dashboard
+                      Dashboard
                     </a>
                     <button
                       type="button"
-                      onClick={() => setSubmitSuccess(false)}
+                      onClick={() => {
+                        setSubmitSuccess(false);
+                        setPublishedArticleId(null);
+                        setPublishedArticleTitle('');
+                      }}
                       className="action-btn draft-btn"
                     >
-                      Write Another Article
+                      Write Another
                     </button>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSubmitSuccess(false)}
+                  onClick={() => {
+                    setSubmitSuccess(false);
+                    setPublishedArticleId(null);
+                    setPublishedArticleTitle('');
+                  }}
                   className="success-close-btn"
                 >
                   <X size={18} />
@@ -873,60 +1067,179 @@ function Write() {
                   </span>
                 </div>
               </div>
-              <div className="price-section">
-                <label htmlFor="price" className="input-label">Price</label>
-                <div className="price-input-simple">
-                  <span>$</span>
-                  <input
-                    type="number"
-                    id="price"
-                    value={price}
-                    onChange={(e) => {
-                      setPrice(e.target.value);
-                      clearSubmitError();
-                    }}
-                    step="0.01"
-                    placeholder="0.05"
-                  />
-                </div>
-              </div>
 
-              {/* Categories Section */}
-              <div className="categories-section">
+              {/* Price and Categories Row */}
+              <div className="article-meta-row">
+                <div className="price-section-enhanced">
+                  <label htmlFor="price" className="input-label">Price</label>
+
+                  {/* Quick Presets */}
+                  <div className="price-presets">
+                    <div className="price-presets-label">Quick Presets:</div>
+                    <div className="price-presets-buttons">
+                      {pricePresets.map((presetValue) => (
+                        <button
+                          key={presetValue}
+                          type="button"
+                          className={`price-preset-btn ${parseFloat(price) === presetValue ? 'active' : ''}`}
+                          onClick={() => handlePresetClick(presetValue)}
+                        >
+                          ${presetValue.toFixed(2)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Price Input */}
+                  <div className="price-custom-input">
+                    <label htmlFor="price-custom" className="price-custom-label">Custom:</label>
+                    <div className="price-input-simple">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        id="price-custom"
+                        value={price}
+                        onChange={(e) => {
+                          setPrice(e.target.value);
+                          clearSubmitError();
+                        }}
+                        step="0.01"
+                        min="0.01"
+                        max="1.00"
+                        placeholder="0.05"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Earnings Preview */}
+                  <div className="price-earnings-preview">
+                    <div className="earnings-preview-icon">💡</div>
+                    <div className="earnings-preview-content">
+                      <div className="earnings-preview-label">Earnings Preview:</div>
+                      <div className="earnings-preview-values">
+                        <div>At 100 reads: <strong>${calculateEarnings(parseFloat(price) || 0.05, 100)}</strong></div>
+                        <div>At 1,000 reads: <strong>${calculateEarnings(parseFloat(price) || 0.05, 1000)}</strong></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Price Range Info - Only show when invalid */}
+                  {(parseFloat(price) < 0.01 || parseFloat(price) > 1.00) && (
+                    <div className="price-range-info price-range-error">
+                      <span className="price-range-text">
+                        Price must be between $0.01 and $1.00
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Categories Section - New Dropdown Design */}
+                <div className="category-dropdown-container" ref={categoryDropdownRef}>
                 <label className="input-label">Categories (Optional)</label>
                 <p className="categories-description">
                   Select up to {MAX_CATEGORIES} categories that best describe your article. This helps readers discover your content.
                 </p>
-                <div className="categories-grid">
-                  {availableCategories.map(category => {
-                    const isSelected = selectedCategories.includes(category);
-                    const isDisabled = !isSelected && selectedCategories.length >= MAX_CATEGORIES;
-                    return (
-                      <button
-                        key={category}
-                        type="button"
-                        className={`category-tag ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                        onClick={() => {
-                          toggleCategory(category);
-                          clearSubmitError();
-                        }}
-                        disabled={isDisabled}
-                        title={isDisabled ? `Maximum ${MAX_CATEGORIES} categories selected. Remove one to add another.` : ''}
-                      >
-                        {category}
-                        {isSelected && <span className="check-mark">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
+
+                {/* Selected Category Chips */}
                 {selectedCategories.length > 0 && (
-                  <div className="selected-categories-summary">
-                    <span className="selected-count">
-                      {selectedCategories.length}/{MAX_CATEGORIES} selected:
-                    </span>
-                    <span className="selected-list">{selectedCategories.join(', ')}</span>
+                  <div className="category-selected-chips">
+                    {selectedCategories.map(category => (
+                      <div key={category} className="category-chip">
+                        <span className="category-chip-emoji">{categoryEmojis[category]}</span>
+                        <span>{category}</span>
+                        <button
+                          type="button"
+                          className="category-chip-remove"
+                          onClick={() => removeCategory(category)}
+                          aria-label={`Remove ${category}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
+
+                {/* Dropdown Trigger */}
+                <div
+                  className={`category-dropdown-trigger ${showCategoryDropdown ? 'open' : ''}`}
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                >
+                  <span className="category-dropdown-trigger-text">
+                    {selectedCategories.length === 0 ? (
+                      'Select categories...'
+                    ) : (
+                      <span>{selectedCategories.length}/{MAX_CATEGORIES} selected</span>
+                    )}
+                  </span>
+                  <ChevronDown
+                    size={18}
+                    className={`category-dropdown-icon ${showCategoryDropdown ? 'open' : ''}`}
+                  />
+                </div>
+
+                {/* Dropdown Menu */}
+                {showCategoryDropdown && (
+                  <div className="category-dropdown-menu">
+                    {/* Search */}
+                    <div className="category-search">
+                      <div style={{ position: 'relative' }}>
+                        <Search
+                          size={16}
+                          style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
+                        />
+                        <input
+                          type="text"
+                          className="category-search-input"
+                          placeholder="Search categories..."
+                          value={categorySearchQuery}
+                          onChange={(e) => setCategorySearchQuery(e.target.value)}
+                          style={{ paddingLeft: '32px' }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Category Groups */}
+                    {Object.keys(getFilteredCategories()).length > 0 ? (
+                      Object.entries(getFilteredCategories()).map(([groupName, categories]) => (
+                        <div key={groupName} className="category-group">
+                          <div className="category-group-header">
+                            {groupName} ({categories.length})
+                          </div>
+                          {categories.map(category => {
+                            const isSelected = selectedCategories.includes(category);
+                            const isDisabled = !isSelected && selectedCategories.length >= MAX_CATEGORIES;
+                            return (
+                              <div
+                                key={category}
+                                className={`category-dropdown-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                                onClick={() => {
+                                  if (!isDisabled) {
+                                    toggleCategory(category);
+                                  }
+                                }}
+                              >
+                                <div className="category-dropdown-item-content">
+                                  <span className="category-dropdown-item-emoji">{categoryEmojis[category]}</span>
+                                  <span>{category}</span>
+                                </div>
+                                {isSelected && (
+                                  <span className="category-dropdown-checkmark">✓</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="category-dropdown-empty">
+                        No categories match "{categorySearchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
+                </div>
               </div>
             </div>
 

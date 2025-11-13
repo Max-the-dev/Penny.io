@@ -6,7 +6,7 @@
  */
 
 import { pgPool } from './supabaseClient';
-import { normalizeAddress } from './utils/address';
+import { normalizeFlexibleAddress } from './utils/address';
 
 // ============================================
 // CONFIGURATION
@@ -48,7 +48,7 @@ export interface SpamCheckResult {
  */
 export async function checkWalletRateLimit(authorAddress: string): Promise<SpamCheckResult> {
   try {
-    const normalizedAddress = normalizeAddress(authorAddress);
+    const normalizedAddress = normalizeFlexibleAddress(authorAddress);
 
     // Check hourly limit
     const hourlyResult = await pgPool.query(
@@ -103,7 +103,7 @@ export async function checkWalletRateLimit(authorAddress: string): Promise<SpamC
  */
 export async function checkRapidSubmission(authorAddress: string): Promise<SpamCheckResult> {
   try {
-    const normalizedAddress = normalizeAddress(authorAddress);
+    const normalizedAddress = normalizeFlexibleAddress(authorAddress);
 
     const result = await pgPool.query(
       `SELECT COUNT(*) as count FROM articles
@@ -166,7 +166,7 @@ export async function checkDuplicateContent(
   options?: { excludeArticleId?: number; similarityThreshold?: number }
 ): Promise<SpamCheckResult> {
   try {
-    const normalizedAddress = normalizeAddress(authorAddress);
+    const normalizedAddress = normalizeFlexibleAddress(authorAddress);
 
     // Get author's recent articles (last 30 days)
     const result = await pgPool.query(
