@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
-import AppKitConnectButton from '../components/AppKitConnectButton';
+import ConnectPromptHero, { dashboardHighlights } from '../components/ConnectPromptHero';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -18,6 +18,7 @@ import {
   Clock,
   PlusCircle,
   CheckCircle,
+  Send,
 } from 'lucide-react';
 import { isDateWithinRange, getRelativeTimeString } from '../utils/dateUtils';
 import { extractPlainText } from '../utils/htmlUtils';
@@ -540,14 +541,12 @@ function Dashboard() {
 
   if (!isConnected) {
     return (
-      <div className="dashboard">
-        <div className="container">
-          <div className="connect-prompt">
-            <h1>Connect Your Wallet</h1>
-            <p>Connect your wallet to access your writer dashboard.</p>
-            <AppKitConnectButton />
-          </div>
-        </div>
+      <div className="dashboard connect-state">
+        <ConnectPromptHero
+          title="Connect your wallet"
+          description="A single screen view for everything that matters—review your metrics, manage your articles, and control your wallets."
+          highlights={dashboardHighlights}
+        />
       </div>
     );
   }
@@ -985,30 +984,59 @@ function Dashboard() {
                         </div>
                       </div>
                       <div className="drafts-item-actions">
-                        <button
-                          type="button"
-                          className="action-btn save-btn"
-                          onClick={() => handleDraftEdit(draft)}
-                          disabled={isPublishingDraft || isDeletingDraft}
+                        <div
+                          className="table-cell actions"
+                          role="group"
+                          aria-label="Draft quick actions"
                         >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="action-btn publish-btn"
-                          onClick={() => handleDraftPublish(draft)}
-                          disabled={isPublishingDraft}
-                        >
-                          {isPublishingDraft && draftConfirmPublish?.id === draft.id ? 'Publishing…' : 'Publish'}
-                        </button>
-                        <button
-                          type="button"
-                          className="action-btn danger-btn"
-                          onClick={() => handleDraftDelete(draft)}
-                          disabled={isDeletingDraft && draftConfirmDelete?.id === draft.id}
-                        >
-                          {isDeletingDraft && draftConfirmDelete?.id === draft.id ? 'Deleting…' : 'Delete'}
-                        </button>
+                          <button
+                            type="button"
+                            className="action-btn edit-btn"
+                            onClick={() => handleDraftEdit(draft)}
+                            disabled={isPublishingDraft || isDeletingDraft}
+                            aria-label="Edit draft"
+                            title="Edit draft"
+                          >
+                            <Edit aria-hidden="true" />
+                            <span className="sr-only">Edit draft</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn publish-action-btn"
+                            onClick={() => handleDraftPublish(draft)}
+                            disabled={isPublishingDraft}
+                            aria-label={
+                              isPublishingDraft && draftConfirmPublish?.id === draft.id
+                                ? 'Publishing draft'
+                                : 'Publish draft'
+                            }
+                            title={
+                              isPublishingDraft && draftConfirmPublish?.id === draft.id
+                                ? 'Publishing draft'
+                                : 'Publish draft'
+                            }
+                          >
+                            <Send aria-hidden="true" />
+                            <span className="sr-only">
+                              {isPublishingDraft && draftConfirmPublish?.id === draft.id
+                                ? 'Publishing draft'
+                                : 'Publish draft'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            className="action-btn delete-btn"
+                            onClick={() => handleDraftDelete(draft)}
+                            disabled={isDeletingDraft && draftConfirmDelete?.id === draft.id}
+                            aria-label={isDeletingDraft && draftConfirmDelete?.id === draft.id ? 'Deleting draft' : 'Delete draft'}
+                            title="Delete draft"
+                          >
+                            <Trash2 aria-hidden="true" />
+                            <span className="sr-only">
+                              {isDeletingDraft && draftConfirmDelete?.id === draft.id ? 'Deleting draft' : 'Delete draft'}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

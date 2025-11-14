@@ -1,8 +1,28 @@
-import { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, FormEvent, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
-import AppKitConnectButton from '../components/AppKitConnectButton';
-import { Save, Send, FileText, Clock, Eye, LayoutDashboard, PenTool, CheckCircle, X, AlertTriangle, Loader2, Check, Dot, ChevronDown, Search, Share2, Copy } from 'lucide-react';
+import ConnectPromptHero, { writeHighlights } from '../components/ConnectPromptHero';
+import {
+  Save,
+  Send,
+  FileText,
+  Clock,
+  Eye,
+  LayoutDashboard,
+  PenTool,
+  CheckCircle,
+  X,
+  AlertTriangle,
+  Loader2,
+  Check,
+  Dot,
+  ChevronDown,
+  Search,
+  Share2,
+  Copy,
+  Edit,
+  Trash2,
+} from 'lucide-react';
 import { apiService, Draft, CreateArticleRequest } from '../services/api';
 import { Editor } from '@tinymce/tinymce-react';
 import { extractPlainText } from '../utils/htmlUtils';
@@ -65,6 +85,7 @@ function Write() {
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const [publishedArticleId, setPublishedArticleId] = useState<number | null>(null);
   const [publishedArticleTitle, setPublishedArticleTitle] = useState<string>('');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
 
   // Content limits
@@ -686,6 +707,25 @@ function Write() {
 
   const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
   const charCount = content.length;
+  const plainTextContent = useMemo(() => extractPlainText(content).trim(), [content]);
+  const previewSummary = useMemo(() => {
+    if (!plainTextContent) return 'Add some content to see a preview.';
+    return plainTextContent.length > 220 ? `${plainTextContent.slice(0, 217)}...` : plainTextContent;
+  }, [plainTextContent]);
+  const previewAuthorHandle = useMemo(() => {
+    if (address) {
+      return `@${address.slice(0, 6)}...${address.slice(-4)}`;
+    }
+    return '@your-handle';
+  }, [address]);
+  const previewEngagement = useMemo(() => {
+    const base = Math.max(180, wordCount * 2);
+    return {
+      reads: base.toLocaleString(),
+      saves: Math.max(12, Math.round(base * 0.08)).toLocaleString(),
+      tips: Math.max(3, Math.round(base * parseFloat(price || '0.05') * 0.02)).toLocaleString(),
+    };
+  }, [wordCount, price]);
   const computedValidationErrors = validateForm();
   const validationErrors = showValidationSummary ? computedValidationErrors : [];
   const summaryMessages = showValidationSummary
@@ -695,14 +735,12 @@ function Write() {
 
   if (!isConnected) {
     return (
-      <div className="write">
-        <div className="container">
-          <div className="connect-prompt">
-            <h1>Connect Your Wallet</h1>
-            <p>Connect your wallet to start writing and publishing articles on Penny.io</p>
-            <AppKitConnectButton />
-          </div>
-        </div>
+      <div className="write connect-state">
+        <ConnectPromptHero
+          title="Connect Your Wallet"
+          description="Experience a modern, responsive, and lightweight writing studio with full control over your content."
+          highlights={writeHighlights}
+        />
       </div>
     );
   }
@@ -908,21 +946,29 @@ function Write() {
                           <span className="draft-price">${draft.price.toFixed(2)}</span>
                           </div>
                         </div>
-                        <div className="draft-actions">
-                          <button 
-                            type="button"
-                            onClick={() => loadDraft(draft)}
-                            className="load-draft-btn"
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => deleteDraft(draft.id)}
-                            className="delete-draft-btn"
-                          >
-                            Delete
-                          </button>
+                        <div className="draft-actions" role="group" aria-label="Draft actions">
+                          <div className="table-cell actions">
+                            <button
+                              type="button"
+                              className="action-btn edit-btn"
+                              onClick={() => loadDraft(draft)}
+                              aria-label="Edit draft"
+                              title="Edit draft"
+                            >
+                              <Edit aria-hidden="true" />
+                              <span className="sr-only">Edit draft</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="action-btn delete-btn"
+                              onClick={() => deleteDraft(draft.id)}
+                              aria-label="Delete draft"
+                              title="Delete draft"
+                            >
+                              <Trash2 aria-hidden="true" />
+                              <span className="sr-only">Delete draft</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -946,25 +992,61 @@ function Write() {
                     </button>
                   </div>
                   <div className="preview-content">
-                    <div className="preview-meta">
-                      <h1 className="preview-title">{title}</h1>
-                      <div className="preview-stats">
-                        <span className="preview-price">${parseFloat(price).toFixed(2)}</span>
-                        <span>•</span>
-                        <span className="preview-read-time">{estimateReadTime(content)}</span>
-                        <span>•</span>
-                        <span className="preview-word-count">
-                          {extractPlainText(content).split(/\s+/).filter(Boolean).length} words
-                        </span>
+                    <div className="preview-controls">
+                      <div className="preview-toggle-group" role="tablist" aria-label="Device preview">
+                        <button
+                          type="button"
+                          className={previewDevice === 'desktop' ? 'is-active' : ''}
+                          onClick={() => setPreviewDevice('desktop')}
+                          role="tab"
+                          aria-selected={previewDevice === 'desktop'}
+                        >
+                          Desktop
+                        </button>
+                        <button
+                          type="button"
+                          className={previewDevice === 'mobile' ? 'is-active' : ''}
+                          onClick={() => setPreviewDevice('mobile')}
+                          role="tab"
+                          aria-selected={previewDevice === 'mobile'}
+                        >
+                          Mobile
+                        </button>
                       </div>
                     </div>
-                    <div className="preview-body">
-                      <div className="preview-text">
-                        {generatePreview(content)}
+
+                    <div className={`preview-stage ${previewDevice}`}>
+                      <div className="preview-article-card">
+                        <div className="article-card is-preview">
+                          <div className="article-card-link">
+                            <h3>{title || 'Untitled article'}</h3>
+                            <p>{previewSummary}</p>
+                          </div>
+                          <div className="article-meta">
+                            <div className="author-info">
+                              <span className="author">by {previewAuthorHandle}</span>
+                              <span className="read-time">{estimateReadTime(content)}</span>
+                            </div>
+                            <span className="price">
+                              ${parseFloat(price || '0').toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="article-stats">
+                            <div className="article-stats-left">
+                              <span className="views">{previewEngagement.reads} views</span>
+                              <span className="purchases">{previewEngagement.saves} readers</span>
+                            </div>
+                            <div className="article-stats-right">
+                              <div className="like-button like-button-disabled like-button-preview">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                                <span>27</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      {content.length > 300 && (
-                        <p className="preview-more">...view more</p>
-                      )}
                     </div>
                   </div>
                   <div className="preview-actions">

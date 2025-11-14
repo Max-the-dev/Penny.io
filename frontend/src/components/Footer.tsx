@@ -58,11 +58,11 @@ function Footer() {
   const DONATION_STORAGE_KEY = 'penny:lastDonation';
   const DONATION_NETWORK_META: Record<'base' | 'solana', { title: string; icon: string }> = {
     base: {
-      title: 'Base · USDC',
+      title: 'Base USDC',
       icon: '/icons/base.png',
     },
     solana: {
-      title: 'Solana · USDC',
+      title: 'Solana USDC',
       icon: '/icons/solana.png',
     },
   };
@@ -649,7 +649,7 @@ function Footer() {
                             min="0.01"
                             max="100"
                             step="0.01"
-                            placeholder="10.00"
+                            placeholder="0.00"
                             value={customAmount}
                             onChange={(e) => {
                               setAmountSelection(null, e.target.value);

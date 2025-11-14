@@ -16,12 +16,12 @@ type NetworkFamily = 'base' | 'solana';
 
 const NETWORK_META: Record<NetworkFamily, { title: string; helperText: string; icon: string }> = {
   base: {
-    title: 'Base · USDC',
+    title: 'Base USDC',
     helperText: '',
     icon: '/icons/base.png',
   },
   solana: {
-    title: 'Solana · USDC',
+    title: 'Solana USDC',
     helperText: '',
     icon: '/icons/solana.png',
   },
@@ -106,6 +106,13 @@ function Article() {
       };
     });
   }, [availableNetworkFamilies]);
+
+  const tipMethodOptions = useMemo( () =>
+    paymentMethodOptions.filter(option => 
+      availableNetworkFamilies.includes(option.family)
+    ),
+    [paymentMethodOptions, availableNetworkFamilies]
+  );
 
   const selectedNetworkLabel = selectedNetworkFamily === 'solana' ? 'Solana USDC' : 'Base USDC';
 
@@ -241,6 +248,9 @@ function Article() {
     }
     return false;
   }, [normalizedUserAddress, authorWallets, article?.authorAddress]);
+
+  const showGuestLockedView = !isConnected && !isAuthor;
+  const canShowPaymentOptions = isConnected && paymentMethodOptions.length > 0;
 
   // Increment view count when article loads (only once per session)
   useEffect(() => {
@@ -382,7 +392,7 @@ function Article() {
         setHasTipped(true);
         setTipResult({
           success: true,
-          message: `Thank you for tipping $${amount.toFixed(2)}!`,
+          message: 'Author received your tip!',
           txHash: result.rawResponse?.data?.transactionHash
         });
       } else {
@@ -404,6 +414,8 @@ function Article() {
 
   // Set default tip options
   const tipOptions = [0.01, 0.05, 0.10, 0.25, 0.50, 1.00];
+
+  const tipAmountValue = (selectedTipAmount ?? parseFloat(customTipAmount)) || 0;
 
   // Format text with basic markdown support
   const formatText = (text: string) => {
@@ -454,7 +466,7 @@ function Article() {
           </header>
 
           <div className="article-body">
-            {!isAuthor && !isPaymentStatusLoaded && (
+            {!isAuthor && !isPaymentStatusLoaded && isConnected && (
               <div className="article-preview">
                 <p>
                   {address
@@ -464,15 +476,15 @@ function Article() {
               </div>
             )}
 
-            {!isAuthor && isPaymentStatusLoaded && !hasPaid && (
+            {(!isAuthor && isPaymentStatusLoaded && !hasPaid) || showGuestLockedView ? (
               <div className="article-preview">
                 {article.preview.split('\n\n').map((paragraph, index) => (
                   <p key={index} dangerouslySetInnerHTML={{__html: sanitizeHTML(paragraph)}} />
                 ))}
               </div>
-            )}
+            ) : null}
 
-            {!hasPaid && isPaymentStatusLoaded && !isAuthor && (
+            {((!hasPaid && isPaymentStatusLoaded && !isAuthor) || showGuestLockedView) && (
               <div className="payment-gate">
                 <div className="paywall-card">
                   <div className="paywall-body">
@@ -490,13 +502,6 @@ function Article() {
                       </div>
                     </div>
 
-                    {!isConnected && (
-                      <div className="connect-wallet">
-                        <p>Connect your wallet to continue</p>
-                        <AppKitConnectButton />
-                      </div>
-                    )}
-
                     <ul className="payment-benefits">
                       <li>Instant access to full article</li>
                       <li>Direct x402 payment to author's wallet</li>
@@ -504,77 +509,88 @@ function Article() {
                     </ul>
                   </section>
 
-                  {isConnected && paymentMethodOptions.length > 0 && <div className="paywall-divider" aria-hidden="true" />}
+                  <div className="paywall-divider" aria-hidden="true" />
 
-                  {isConnected && paymentMethodOptions.length > 0 && (
-                    <section
-                      className="paywall-methods"
-                      role="radiogroup"
-                      aria-label="Select payment network"
-                    >
-                      <div className="method-header">
-                        <div>
-                          <p>Complete purchase</p>
-                          <span>Available payment options:</span>
+                  <section
+                    className="paywall-methods"
+                    role="radiogroup"
+                    aria-label={canShowPaymentOptions ? 'Select payment network' : 'Connect your wallet'}
+                  >
+                    {canShowPaymentOptions ? (
+                      <>
+                        <div className="method-header">
+                          <div>
+                            <p>Complete purchase</p>
+                            <span>Available payment options:</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="method-grid">
-                        {paymentMethodOptions.map(option => {
-                          const isActive = selectedNetworkFamily === option.family;
-                          return (
-                            <button
-                              key={option.family}
-                              type="button"
-                              role="radio"
-                              aria-checked={isActive}
-                              aria-label={option.title}
-                              className={`method-card${isActive ? ' is-active' : ''}`}
-                              onClick={() => setSelectedNetworkFamily(option.family)}
-                            >
-                              <span className="method-card__icon" aria-hidden="true">
-                                <img src={option.icon} alt="" />
-                              </span>
-                              <span className="method-card__body">
-                                <span className="method-card__title">{option.title}</span>
-                                <span className="method-card__helper">{option.helperText}</span>
-                              </span>
-                              {isActive && (
-                                <span className="method-card__badge">
-                                  Selected
+                        <div className="method-grid">
+                          {paymentMethodOptions.map(option => {
+                            const isActive = selectedNetworkFamily === option.family;
+                            return (
+                              <button
+                                key={option.family}
+                                type="button"
+                                role="radio"
+                                aria-checked={isActive}
+                                aria-label={option.title}
+                                className={`method-card${isActive ? ' is-active' : ''}`}
+                                onClick={() => setSelectedNetworkFamily(option.family)}
+                              >
+                                <span className="method-card__icon" aria-hidden="true">
+                                  <img src={option.icon} alt="" />
                                 </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <button
-                        className="pay-button"
-                        onClick={handlePayment}
-                        disabled={isProcessingPayment}
-                      >
-                        <span className="pay-button__label">
-                          {isProcessingPayment
-                            ? 'Processing...'
-                            : `Pay $${article.price.toFixed(2)}`}
-                        </span>
-                        <Coins
-                          size={18}
-                          aria-hidden="true"
-                          className="pay-button__icon"
-                        />
-                      </button>
-
-                      {paymentError && (
-                        <div className="payment-error">
-                          <p>{paymentError}</p>
+                                <span className="method-card__body">
+                                  <span className="method-card__title">{option.title}</span>
+                                  <span className="method-card__helper">{option.helperText}</span>
+                                </span>
+                                {isActive && (
+                                  <span className="method-card__badge">
+                                    Selected
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
-                      )}
-                      <p className="paywall-footnote">Blockchain transactions are final.</p>
 
-                    </section>
-                  )}
+                        <button
+                          className="pay-button"
+                          onClick={handlePayment}
+                          disabled={isProcessingPayment}
+                        >
+                          <span className="pay-button__label">
+                            {isProcessingPayment
+                              ? 'Processing...'
+                              : `Pay $${article.price.toFixed(2)}`}
+                          </span>
+                          <Coins
+                            size={18}
+                            aria-hidden="true"
+                            className="pay-button__icon"
+                          />
+                        </button>
+
+                        {paymentError && (
+                          <div className="payment-error">
+                            <p>{paymentError}</p>
+                          </div>
+                        )}
+                        <p className="paywall-footnote">Blockchain transactions are final.</p>
+                      </>
+                    ) : (
+                      <div className="paywall-connect-panel">
+                        <p>Connect your wallet to continue</p>
+                        <AppKitConnectButton />
+                        <ul className="paywall-connect-benefits">
+                          <li>Reown wallet authentication</li>
+                          <li>Settled by Coinbase x402</li>
+                          <li>Access retained forever</li>
+                        </ul>
+                      </div>
+                    )}
+                  </section>
                   </div>
 
                   <div className="paywall-footer">
@@ -688,75 +704,115 @@ function Article() {
               
               <div className="tip-modal-content">
                 <p>Show your appreciation for this great content!</p>
-                
-                <div className="tip-amount-selector">
-                  <label>Select tip amount:</label>
-                  <div className="tip-options">
-                    {tipOptions.map((amount) => (
-                      <button
-                        key={amount}
-                        className={`tip-option ${selectedTipAmount === amount ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedTipAmount(amount);
-                          setCustomTipAmount(''); // Clear custom input when preset is clicked
-                        }}
-                      >
-                        ${amount.toFixed(2)}
-                      </button>
-                    ))}
+                <section className="tip-amount-selector">
+                    <label>Select tip amount:</label>
+                    <div
+                      className="tip-amount-grid"
+                      role="group"
+                      aria-label="Choose tip amount"
+                    >
+                      {tipOptions.map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          className={`tip-amount-chip ${selectedTipAmount === amount ? 'is-active' : ''}`}
+                          onClick={() => {
+                            setSelectedTipAmount(amount);
+                            setCustomTipAmount('');
+                          }}
+                          disabled={isProcessingTip}
+                        >
+                          ${amount.toFixed(2)}
+                        </button>
+                      ))}
+                    </div>
+                </section>
+                <div className="tip-custom-amount donation-custom-input">
+                  <label htmlFor="tip-custom-amount" className="donation-modal-description">
+                    Custom amount:
+                  </label>
+                  <div className="donation-custom-field">
+                    <span aria-hidden="true">$</span>
+                    <input
+                      id="tip-custom-amount"
+                      type="number"
+                      min="0.1"
+                      max="100"
+                      step="0.1"
+                      value={customTipAmount}
+                      onChange={(e) => {
+                        setCustomTipAmount(e.target.value);
+                        setSelectedTipAmount(null); // Clear preset selection when typing
+                      }}
+                      placeholder="0.00"
+                      inputMode="decimal"
+                    />
                   </div>
-                </div>
-                
-                <div className="tip-custom-amount">
-                  <label>Or enter custom amount:</label>
-                  <input
-                    type="number"
-                    min="0.1"
-                    max="100"
-                    step="0.1"
-                    value={customTipAmount}
-                    onChange={(e) => {
-                      setCustomTipAmount(e.target.value);
-                      setSelectedTipAmount(null); // Clear preset selection when typing
-                    }}
-                    className="tip-amount-input"
-                  />
+                  <small>Min $0.10 · Max $100</small>
                 </div>
 
-                {availableNetworkFamilies.length > 0 && (
-                  <div className="tip-network-selector">
-                    <label>Choose network:</label>
-                    <div className="tip-network-options">
-                      {(['base', 'solana'] as const).map((family) => {
-                        const isSupported = availableNetworkFamilies.includes(family);
-                        return (
-                          <button
-                            key={family}
-                            type="button"
-                            className={`network-option ${selectedTipNetworkFamily === family ? 'active' : ''} ${!isSupported ? 'disabled' : ''}`}
-                            onClick={() => isSupported && setSelectedTipNetworkFamily(family)}
-                            disabled={!isSupported}
-                          >
-                            {family === 'solana' ? 'Solana' : 'Base'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                {tipMethodOptions.length > 0 && (
+                    <section
+                      className="donation-methods tip-network-selector"
+                      role="radiogroup"
+                      aria-label="Choose tip network"
+                    >
+                      <div className="method-header">
+                        <div>
+                          <p>Select Chain</p>
+                          <span>More options coming soon</span>
+                        </div>
+                      </div>
+                      <div className="method-grid">
+                        {tipMethodOptions.map(option => {
+                          const isActive = selectedTipNetworkFamily === option.family;
+                          return (
+                            <button
+                              key={option.family}
+                              type="button"
+                              role="radio"
+                              aria-checked={isActive}
+                              aria-label={option.title}
+                              className={`method-card${isActive ? ' is-active' : ''}`}
+                              onClick={() => setSelectedTipNetworkFamily(option.family)}
+                            >
+                              <span className="method-card__icon" aria-hidden="true">
+                                <img src={option.icon} alt="" />
+                              </span>
+                              <span className="method-card__body">
+                                <span className="method-card__title">{option.title}</span>
+                                <span className="method-card__helper">{option.helperText}</span>
+                              </span>
+                              {isActive && <span className="method-card__badge">Selected</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+
+                
                 
                 <div className="tip-modal-actions">
                   <button
-                    className="tip-submit-button"
-                    onClick={handleTip}
-                    disabled={
-                      isProcessingTip ||
-                      !isTipNetworkReady ||
-                      (!selectedTipAmount && !customTipAmount)
-                    }
-                  >
-                    {isProcessingTip ? 'Processing...' : `Send Tip $${(selectedTipAmount || parseFloat(customTipAmount) || 0).toFixed(2)}`}
-                  </button>
+                      type="button"
+                      className="pay-button tip-submit-button"
+                      onClick={handleTip}
+                      disabled={
+                        isProcessingTip ||
+                        !isTipNetworkReady ||
+                        (!selectedTipAmount && !customTipAmount)
+                      }
+                    >
+                      <span className="pay-button__label">
+                        {isProcessingTip
+                          ? 'Processing...'
+                          : tipAmountValue
+                            ? `Tip $${tipAmountValue.toFixed(2)}`
+                            : 'Tip'}
+                      </span>
+                      <Coins size={18} aria-hidden="true" className="pay-button__icon" />
+                    </button>
                 </div>
                 
                       {tipResult && (

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAppKitAccount, useAppKitNetwork, useAppKitProvider } from '@reown/appkit/react';
 import { useAppKit, useWalletInfo } from '@reown/appkit/react';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { WalletMinimal } from 'lucide-react';
 
 // USDC contract addresses for EVM chains
 const USDC_ADDRESSES_EVM = {
@@ -151,13 +152,19 @@ const AppKitConnectButton = () => {
 
   const networkIcon = getNetworkIcon();
 
+  const isWalletConnected = isConnected && Boolean(address);
+
+  const buttonClassName = isWalletConnected
+    ? 'wallet-connect-button'
+    : 'wallet-connect-button wallet-connect-button--disconnected';
+
   return (
     <button
       onClick={() => open()}
-      className="wallet-connect-button"
+      className={buttonClassName}
       type="button"
     >
-      {isConnected && address ? (
+      {isWalletConnected ? (
         <>
           <div className="wallet-info">
             {walletInfo?.icon && (
@@ -187,7 +194,17 @@ const AppKitConnectButton = () => {
           )}
         </>
       ) : (
-        'Connect Wallet'
+        <>
+          <WalletMinimal
+            aria-hidden="true"
+            className="wallet-connect-button--disconnected__icon"
+            strokeWidth={2.4}
+            size={18}
+          />
+          <span className="wallet-connect-button__text wallet-connect-button--disconnected__label">
+            Connect Wallet
+          </span>
+        </>
       )}
     </button>
   );
