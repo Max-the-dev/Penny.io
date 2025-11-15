@@ -17,7 +17,6 @@ import {
   Edit,
   FileText,
   Clock,
-  PlusCircle,
   CheckCircle,
   Send,
   WalletMinimal,
@@ -38,6 +37,7 @@ import {
 } from '../services/api';
 import { PublicKey } from '@solana/web3.js';
 import { isAddress as isEvmAddress } from 'viem';
+import { getEnsName } from 'viem/actions';
 
 
 type NetworkFamily = 'base' | 'solana';
@@ -50,6 +50,11 @@ const truncateAddress = (value?: string | null) => {
 const networkSwatches: Record<NetworkFamily, { label: string; color: string }> = {
   base: { label: 'Base', color: '#2563eb' },
   solana: { label: 'Solana', color: '#16a34a' },
+};
+
+const networkIconMap: Record<NetworkFamily, string> = {
+  base: 'https://avatars.githubusercontent.com/u/108554348?s=200&v=4',
+  solana: 'https://avatars.githubusercontent.com/u/35608259?s=200&v=4',
 };
 
 const getNetworkFamily = (network?: SupportedAuthorNetwork | null): NetworkFamily => {
@@ -443,6 +448,8 @@ function Dashboard() {
   const secondaryDisplayFamily: NetworkFamily = secondaryWalletExists
     ? getNetworkFamily(author?.secondaryPayoutNetwork)
     : complementaryNetworkFamily;
+  const primaryNetworkIcon = networkIconMap[primaryNetworkFamily];
+  const secondaryNetworkIcon = networkIconMap[secondaryDisplayFamily];
 
   const validateSecondaryAddress = (value: string) => {
     const trimmed = value.trim();
@@ -582,6 +589,12 @@ function Dashboard() {
     setPayoutStatus(null);
   };
 
+  const clearSecondaryInput = () => {
+    setSecondaryAddressInput('');
+    setSecondaryAddressError('');
+    setPayoutStatus(null);
+  };
+
   const handleCloseWalletModal = () => {
     setShowWalletModal(false);
     resetSecondaryForm();
@@ -589,11 +602,23 @@ function Dashboard() {
   };
 
   const requestPayoutChange = (
-    type: "remove" | "replace",
-    payload?: {newAddress?: string}
+    type: 'remove' | 'replace',
+    payload?: { newAddress?: string }
   ) => {
-    setPendingConfirmation({type, payload});
+    setPendingConfirmation({ type, payload });
     setShowPayoutConfirm(true);
+  };
+
+  const handleSecondarySubmitRequest = () => {
+    const trimmed = secondaryAddressInput.trim();
+    const validationError = validateSecondaryAddress(trimmed);
+    if (validationError) {
+      setSecondaryAddressError(validationError);
+      setPayoutStatus(null);
+      return;
+    }
+    setSecondaryAddressError('');
+    requestPayoutChange('replace');
   };
 
   const handleConfirmPayoutChange = async () => {
@@ -660,55 +685,47 @@ function Dashboard() {
             <LayoutDashboard size={25} /> Writer Dashboard
           </h1>
           {author && (
-            <div className="wallet-summary">
-              <div className="wallet-summary-row">
-                <div>
-                  <p className="wallet-summary-label">
-                    Primary wallet
-                    <span className={`network-badge network-badge--${primaryNetworkFamily}`}>
-                      {getNetworkLabel(primaryNetworkFamily)}
-                    </span>
-                  </p>
-                  <p className="wallet-summary-address">
-                    {truncateAddress(author.address || address)}
-                  </p>
-                </div>
+            <div className="wallet-summary" role="region" aria-label="Wallet summary">
+              <div className="wallet-summary-trigger-wrapper">
+                <button
+                  type="button"
+                  className={`plusButton wallet-summary-trigger${
+                    secondaryWalletExists ? ' has-secondary' : ''
+                  }`}
+                  onClick={openWalletModal}
+                  aria-label={secondaryWalletExists ? 'Manage payout wallets' : 'Add secondary wallet'}
+                  title={secondaryWalletExists ? 'Manage payout wallets' : 'Add secondary wallet'}
+                >
+                  {secondaryWalletExists ? (
+                    <WalletMinimal className="plusIcon" aria-hidden="true" />
+                  ) : (
+                    <Plus className="plusIcon" aria-hidden="true" />
+                  )}
+                  <span className="sr-only">
+                    {secondaryWalletExists
+                      ? 'Open wallet management modal'
+                      : 'Add a secondary wallet'}
+                  </span>
+                </button>
               </div>
 
-              {author.secondaryPayoutAddress && (
-                <div className="wallet-summary-row">
-                  <div>
-                    <p className="wallet-summary-label">
-                      Secondary wallet
-                      <span className={`network-badge network-badge--${secondaryDisplayFamily}`}>
-                        {getNetworkLabel(secondaryDisplayFamily)}
-                      </span>
-                    </p>
-                    <p className="wallet-summary-address">
-                      {truncateAddress(author.secondaryPayoutAddress)}
-                    </p>
-                  </div>
-                </div>
-              )}
+              <div className="wallet-summary-lines">
+                <p className="wallet-summary-line">
+                  <span className="wallet-summary-label">Primary wallet:</span>
+                  <span className="wallet-summary-value">
+                    {truncateAddress(author.address || address)}
+                  </span>
+                </p>
 
-              <button
-                type="button"
-                className="wallet-summary-manage"
-                onClick={openWalletModal}
-                aria-label="Manage payout methods"
-              >
-                {author.secondaryPayoutAddress ? (
-                  <>
-                    <Edit size={16} />
-                    Manage payout methods
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle size={16} />
-                    Add secondary wallet
-                  </>
+                {author.secondaryPayoutAddress && (
+                  <p className="wallet-summary-line">
+                    <span className="wallet-summary-label">Secondary wallet:</span>
+                    <span className="wallet-summary-value">
+                      {truncateAddress(author.secondaryPayoutAddress)}
+                    </span>
+                  </p>
                 )}
-              </button>
+              </div>
             </div>
           )}
         </div>
@@ -1206,53 +1223,65 @@ function Dashboard() {
             <header className="wallet-lab__header">
               <div>
                 <p className="wallet-lab__eyebrow">Wallet Management</p>
-                <h1>Control where earnings pay out</h1>
-                <p>Keep a primary {getNetworkLabel(primaryNetworkFamily)} wallet and route payouts to a secondary address.</p>
+                <h1>More ways to get paid</h1>
+                <p>Keep a primary {getNetworkLabel(primaryNetworkFamily)} wallet and accept payments on {getNetworkLabel(complementaryNetworkFamily)}.</p>
               </div>
             </header>
 
             <div className="wallet-lab__grid">
               <div className="wallet-lab__cards">
                 <article className="wallet-card wallet-card--primary">
-                  <div
-                    className="wallet-card__badge"
-                    style={{ backgroundColor: networkSwatches[primaryNetworkFamily].color }}
-                  >
-                    {networkSwatches[primaryNetworkFamily].label}
+                  <div className="wallet-card__status-badge">Connected</div>
+                  <div className={`wallet-card__badge wallet-card__badge--${primaryNetworkFamily}`}>
+                    {primaryNetworkIcon ? (
+                      <img
+                        src={primaryNetworkIcon}
+                        alt={`${getNetworkLabel(primaryNetworkFamily)} network`}
+                      />
+                    ) : (
+                      <span>{networkSwatches[primaryNetworkFamily].label}</span>
+                    )}
                   </div>
                   <h3>Primary wallet</h3>
-                  <p className="wallet-card__address">
-                    {truncateAddress(author?.address || address)}
-                  </p>
-                  <div className="wallet-card__meta">
-                    <span className="wallet-card__status">Connected</span>
-                    <button
-                      type="button"
-                      className="wallet-card__ghost"
-                      onClick={() => handleCopyWallet(author?.address || address, 'primary')}
-                    >
-                      <Copy size={14} />
-                      {copiedAddress === 'primary' ? 'Copied' : 'Copy'}
-                    </button>
+                  <div className="wallet-card__content">
+                    <p className="wallet-card__address">
+                      {truncateAddress(author?.address || address)}
+                    </p>
+                    <div className="wallet-card__actions">
+                      <button
+                        type="button"
+                        className="wallet-card__ghost"
+                        onClick={() => handleCopyWallet(author?.address || address, 'primary')}
+                      >
+                        <Copy size={14} />
+                        {copiedAddress === 'primary' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
                 </article>
 
                 <article className="wallet-card wallet-card--secondary">
-                  <div
-                    className="wallet-card__badge"
-                    style={{ backgroundColor: networkSwatches[secondaryDisplayFamily].color }}
-                  >
-                    {networkSwatches[secondaryDisplayFamily].label}
+                  {secondaryWalletExists && (
+                    <div className="wallet-card__status-badge">Connected</div>
+                  )}
+                  <div className={`wallet-card__badge wallet-card__badge--${secondaryDisplayFamily}`}>
+                    {secondaryNetworkIcon ? (
+                      <img
+                        src={secondaryNetworkIcon}
+                        alt={`${getNetworkLabel(secondaryDisplayFamily)} network`}
+                      />
+                    ) : (
+                      <span>{networkSwatches[secondaryDisplayFamily].label}</span>
+                    )}
                   </div>
                   <h3>Secondary wallet</h3>
                   {secondaryWalletExists ? (
                     <>
-                      <p className="wallet-card__address">
-                        {truncateAddress(author?.secondaryPayoutAddress)}
-                      </p>
-                      <div className="wallet-card__meta">
-                        <span className="wallet-card__status">Connected</span>
-                        <div className="wallet-card__meta">
+                      <div className="wallet-card__content">
+                        <p className="wallet-card__address">
+                          {truncateAddress(author?.secondaryPayoutAddress)}
+                        </p>
+                        <div className="wallet-card__actions">
                           <button
                             type="button"
                             className="wallet-card__ghost"
@@ -1281,16 +1310,16 @@ function Dashboard() {
                 </article>
               </div>
 
-              <div className="wallet-lab__form">
-                <div className="wallet-lab__form-head">
-                  <ShieldCheck size={18} />
+                <div className="wallet-lab__form">
+                  <div className="wallet-lab__form-head">
+                    <WalletMinimal size={18} />
                   <div>
-                    <h4>Route {getNetworkLabel(complementaryNetworkFamily)} payouts</h4>
-                    <p>Only one wallet per network. Replace it anytime.</p>
+                    <h4>Add a {getNetworkLabel(complementaryNetworkFamily)} wallet</h4>
+                    <p>More networks coming soon</p>
                   </div>
                 </div>
                 <label>
-                  Solana USDC address
+                  {getNetworkLabel(complementaryNetworkFamily)} address
                   <input
                     type="text"
                     placeholder={`Enter ${getNetworkLabel(complementaryNetworkFamily)} wallet address`}
@@ -1317,17 +1346,17 @@ function Dashboard() {
                   <button
                     type="button"
                     className="wallet-lab__primary"
-                    onClick={() => requestPayoutChange('replace')}
+                    onClick={handleSecondarySubmitRequest}
                     disabled={isSavingPayout || !canSaveSecondary}
                   >
-                    {isSavingPayout ? 'Saving…' : 'Save wallet'}
+                    {isSavingPayout ? 'Saving…' : 'Submit'}
                   </button>
                   <button
                     type="button"
                     className="wallet-lab__ghost"
-                    onClick={resetSecondaryForm}
+                    onClick={clearSecondaryInput}
                   >
-                    Reset
+                    Clear
                   </button>
                 </div>
               </div>
@@ -1339,7 +1368,7 @@ function Dashboard() {
             <h3>Confirm wallet change</h3>
             <p>
               Make sure you still have access to your primary wallet. Removing or replacing
-              this secondary payout method will sign you out unless you reconnect.
+              the secondary payout method will sign you out.
             </p>
             <div className="payout-confirm__actions">
               <button
@@ -1357,7 +1386,7 @@ function Dashboard() {
                 className="btn-danger"
                 onClick={handleConfirmPayoutChange}
               >
-                Continue
+                I understand
               </button>
             </div>
           </div>

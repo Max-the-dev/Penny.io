@@ -160,7 +160,7 @@ const criticalLimiter = rateLimit({
  */
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isProduction ? 30 : 300,
+  max: isProduction ? 10 : 100,
   message: {
     success: false,
     error: 'Too many upload requests. Please wait before uploading more files.'

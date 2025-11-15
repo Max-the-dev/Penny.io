@@ -1,135 +1,86 @@
-# x402 Payment Protocol: Technical Documentation
+x402 Payment Protocol: Technical Documentation
 
-#using pandoc 
-# Convert to PDF with nice styling
+using pandoc
+Convert to PDF with nice styling
 
-#pandoc x402-technical-documentation.md \
-  #-o x402-technical-documentation.pdf \
-  #--pdf-engine=xelatex \
- # -V geometry:margin=1in \
- # -V colorlinks=true \
- # -V linkcolor=blue
- 
+pandoc x402-technical-documentation.md \
+-o x402-technical-documentation.pdf \
+--pdf-engine=xelatex \
+-V geometry:margin=1in \
+-V colorlinks=true \
+-V linkcolor=blue
 
-**How Penny.io Enables Instant Micropayments on Base**
+How Penny.io Enables Instant Micropayments on Base
 
- ### MAKE SURE TO ADD SOLANA SPPORT
-
----
-
- 
-
-## Table of Contents
-
- 
-
-1. [What is x402?](#what-is-x402)
-
-2. [Why x402 Matters](#why-x402-matters)
-
-3. [How It Works](#how-it-works)
-
-4. [Payment Flow Diagram](#payment-flow-diagram)
-
-5. [Implementation Details](#implementation-details)
-
-6. [Authorization vs Settlement](#authorization-vs-settlement)
-
-7. [Gas Costs & Scalability](#gas-costs--scalability)
-
-8. [Code Examples](#code-examples)
-
-9. [Security Considerations](#security-considerations)
-
- 
+MAKE SURE TO ADD SOLANA SUPPORT
 
 ---
 
- 
+Table of Contents
 
-## What is x402?
-
- 
-
-**x402 is an HTTP payment protocol that enables instant micropayments on Layer 2 networks.**
-
- 
-
-Inspired by HTTP's `402 Payment Required` status code (reserved but never implemented), x402 brings native payment functionality to the web. Instead of requiring readers to connect payment methods, create accounts, or manage subscriptions, x402 allows **wallet-to-wallet micropayments** with a single signature.
-
- 
-
-Think of it as **HTTP, but for money.**
-
- 
-
-### Key Features
-
- 
-
-- **Instant Verification** - Payments verified in ~2 seconds (vs 15+ seconds for on-chain transactions)
-
-- **Micropayment Optimized** - Designed for $0.01-$1.00 transactions
-
-- **No Platform Custody** - Direct wallet-to-wallet transfers
-
-- **Signature-Based** - Uses EIP-712 typed signatures for authorization
-
-- **Layer 2 Native** - Built for Base, Optimism, Arbitrum, and other L2s
-
-- **Open Standard** - Fully open-source protocol
-
- 
+1. What is x402?
+2. Why x402 Matters
+3. How It Works
+4. Payment Flow Diagram
+5. Implementation Details
+6. Authorization vs Settlement
+7. Gas Costs & Scalability
+8. Code Examples
+9. Security Considerations
 
 ---
 
- 
+What is x402?
 
-## Why x402 Matters
+x402 is an HTTP payment protocol that enables instant micropayments on Layer 2 networks.
 
- 
+Inspired by HTTP's 402 Payment Required status code (reserved but never implemented), x402 brings native payment functionality to the web. Instead of requiring readers to connect payment methods, create accounts, or manage subscriptions, x402 allows wallet-to-wallet micropayments with a single signature.
 
-Traditional blockchain payments have a critical flaw: **every transaction requires on-chain submission**, which means:
+Think of it as HTTP, but for money.
 
- 
+Key Features
 
-- ❌ **High gas fees** ($0.10-$0.50 per transaction, even on L2s)
+- Instant Verification - Payments verified in ~2 seconds (vs 15+ seconds for on-chain transactions)
 
-- ❌ **Slow confirmation times** (15-60 seconds per payment)
+- Micropayment Optimized - Designed for $0.01-$1.00 transactions
 
-- ❌ **Poor UX** (multiple wallet popups, long waits)
+- No Platform Custody - Direct wallet-to-wallet transfers
 
- 
+- Signature-Based - Uses EIP-712 typed signatures for authorization
 
-**x402 solves this with authorization-based payments:**
+- Layer 2 Native - Built for Base, Optimism, Arbitrum, and other L2s
 
- 
+- Open Standard - Fully open-source protocol
 
-✅ User signs an **authorization** (like signing a check)
+---
 
-✅ Platform verifies the signature **instantly** (off-chain)
+Why x402 Matters
 
-✅ Content unlocks **immediately**
+Traditional blockchain payments have a critical flaw: every transaction requires on-chain submission, which means:
 
-✅ Settlement happens **later**, in batches (optional)
+- [X] High gas fees ($0.10-$0.50 per transaction, even on L2s)
 
- 
+- [X] Slow confirmation times (15-60 seconds per payment)
+
+- [X] Poor UX (multiple wallet popups, long waits)
+
+x402 solves this with authorization-based payments:
+
+[OK] User signs an authorization (like signing a check)
+
+[OK] Platform verifies the signature instantly (off-chain)
+
+[OK] Content unlocks immediately
+
+[OK] Settlement happens later, in batches (optional)
 
 This makes micropayments economically viable for the first time.
 
- 
-
 ---
 
- 
+How It Works
 
-## How It Works
-
- 
-
-### The x402 Flow (High-Level)
-
- 
+The x402 Flow (High-Level)
 
 ```
 
@@ -189,7 +140,7 @@ This makes micropayments economically viable for the first time.
 
      │                      │                       │
 
-     │                      │ 8. ✅ Valid!          │
+     │                      │ 8. [OK] Valid!          │
 
      │                      │                       │
 
@@ -205,11 +156,7 @@ This makes micropayments economically viable for the first time.
 
 ```
 
- 
-
-### Three-Step Purchase Flow
-
- 
+Three-Step Purchase Flow
 
 ```
 
@@ -217,9 +164,9 @@ This makes micropayments economically viable for the first time.
 
 │ Step 1: Verify Authorization                       │
 
-│ ✅ Valid signature? → Continue                     │
+│ [OK] Valid signature? -> Continue                     │
 
-│ ❌ Invalid? → Return 400 error                     │
+│ [X] Invalid? -> Return 400 error                     │
 
 └────────────────────────────────────────────────────┘
 
@@ -229,9 +176,9 @@ This makes micropayments economically viable for the first time.
 
 │ Step 2: Settle Payment (Optional)                  │
 
-│ ✅ CDP transfers USDC (gasless)                    │
+│ [OK] CDP transfers USDC (gasless)                    │
 
-│ ✅ Or: Record authorization for batch settlement   │
+│ [OK] Or: Record authorization for batch settlement   │
 
 └────────────────────────────────────────────────────┘
 
@@ -241,29 +188,21 @@ This makes micropayments economically viable for the first time.
 
 │ Step 3: Grant Access                               │
 
-│ ✅ Record payment in database                      │
+│ [OK] Record payment in database                      │
 
-│ ✅ Unlock content for user                         │
+│ [OK] Unlock content for user                         │
 
-│ ✅ Return success response                         │
+│ [OK] Return success response                         │
 
 └────────────────────────────────────────────────────┘
 
 ```
 
- 
-
 ---
 
- 
+Payment Flow Diagram
 
-## Payment Flow Diagram
-
- 
-
-### Complete x402 Payment Flow (Penny.io Implementation)
-
- 
+Complete x402 Payment Flow (Penny.io Implementation)
 
 ```
 
@@ -325,7 +264,7 @@ This makes micropayments economically viable for the first time.
 
      │                      │                       │                        │
 
-     │                      │                       │ 8. ✅ Valid!           │
+     │                      │                       │ 8. [OK] Valid!           │
 
      │                      │                       │                        │
 
@@ -363,85 +302,57 @@ This makes micropayments economically viable for the first time.
 
 ```
 
- 
-
 ---
 
- 
+Implementation Details
 
-## Implementation Details
-
- 
-
-### Key Components
-
- 
+Key Components
 
 | Component | File | Role |
 
 |-----------|------|------|
 
-| **Payment Initiator** | `frontend/src/pages/Article.tsx` | User clicks "Purchase" → calls x402PaymentService |
+| Payment Initiator | frontend/src/pages/Article.tsx | User clicks "Purchase" -> calls x402PaymentService |
 
-| **Payment Orchestrator** | `frontend/src/services/x402PaymentService.ts` | 1) GET requirements 2) Sign payment 3) Send X-PAYMENT header |
+| Payment Orchestrator | frontend/src/services/x402PaymentService.ts | 1) GET requirements 2) Sign payment 3) Send X-PAYMENT header |
 
-| **Payment Processor** | `backend/src/routes.ts` | 1) Return 402 requirements 2) Verify signature 3) Record payment |
+| Payment Processor | backend/src/routes.ts | 1) Return 402 requirements 2) Verify signature 3) Record payment |
 
-| **Payment Tracker** | `backend/src/database.ts` | Stores payment in PostgreSQL (prevents duplicate payments) |
+| Payment Tracker | backend/src/database.ts | Stores payment in PostgreSQL (prevents duplicate payments) |
 
-| **Facilitator Selector** | `backend/src/routes.ts` | Chooses CDP vs public facilitator based on API keys |
-
- 
+| Facilitator Selector | backend/src/routes.ts | Chooses CDP vs public facilitator based on API keys |
 
 ---
 
- 
+Authorization vs Settlement
 
-## Authorization vs Settlement
-
- 
-
-### The Critical Distinction
-
- 
+The Critical Distinction
 
 When a user purchases an article on Penny.io, here's what actually happens:
 
- 
+What You Might Think Happened:
 
-#### What You Might Think Happened:
+1. [OK] User signed transaction
 
- 
+2. [OK] $0.12 USDC transferred on-chain
 
-1. ✅ User signed transaction
+3. [OK] Author received USDC in their wallet
 
-2. ✅ $0.12 USDC transferred on-chain
+4. [OK] Transaction hash recorded
 
-3. ✅ Author received USDC in their wallet
+What Actually Happened:
 
-4. ✅ Transaction hash recorded
+1. [OK] User signed an authorization (like signing a check)
 
- 
+2. [OK] Backend verified authorization is valid
 
-#### What Actually Happened:
+3. [OK] Backend recorded "this user CAN pay $0.12 USDC"
 
- 
+4. [X] NO on-chain transaction happened (yet!)
 
-1. ✅ User signed an **authorization** (like signing a check)
+5. [X] USDC is STILL in user's wallet
 
-2. ✅ Backend verified authorization is **valid**
-
-3. ✅ Backend recorded "this user CAN pay $0.12 USDC"
-
-4. ❌ **NO on-chain transaction happened (yet!)**
-
-5. ❌ **USDC is STILL in user's wallet**
-
- 
-
-### Analogy: Checks vs Cash
-
- 
+Analogy: Checks vs Cash
 
 | Traditional Blockchain | x402 Authorization |
 
@@ -453,13 +364,9 @@ When a user purchases an article on Penny.io, here's what actually happens:
 
 | $0.50 gas per payment | $0.0001 gas when batching many checks |
 
- 
+What's Recorded in the Database
 
-### What's Recorded in the Database
-
- 
-
-```typescript
+```
 
 {
 
@@ -477,23 +384,17 @@ When a user purchases an article on Penny.io, here's what actually happens:
 
 ```
 
- 
+[OK] User signed a valid authorization
 
-✅ User signed a valid authorization
+[OK] User HAS the USDC (facilitator verified)
 
-✅ User HAS the USDC (facilitator verified)
+[OK] Authorization CAN be settled on-chain anytime
 
-✅ Authorization CAN be settled on-chain anytime
+[X] Money hasn't actually moved yet
 
-❌ Money hasn't actually moved yet
+When Does Settlement Happen?
 
- 
-
-### When Does Settlement Happen?
-
- 
-
-**Option 1: Immediate Settlement (Current Implementation)**
+Option 1: Immediate Settlement (Current Implementation)
 
 - Backend submits authorization on-chain immediately
 
@@ -503,9 +404,7 @@ When a user purchases an article on Penny.io, here's what actually happens:
 
 - Transaction hash recorded
 
- 
-
-**Option 2: Batch Settlement (Future Optimization)**
+Option 2: Batch Settlement (Future Optimization)
 
 - Collect 100-1,000 authorizations
 
@@ -515,41 +414,25 @@ When a user purchases an article on Penny.io, here's what actually happens:
 
 - Even lower per-payment cost
 
- 
-
 ---
 
- 
+Gas Costs & Scalability
 
-## Gas Costs & Scalability
+Who Pays Gas?
 
- 
-
-### Who Pays Gas?
-
- 
-
-**Anyone can submit the authorization on-chain!**
-
- 
+Anyone can submit the authorization on-chain!
 
 Think of it like a signed check:
 
-- The check is signed by the buyer (✅ valid signature)
+- The check is signed by the buyer ([OK] valid signature)
 
 - But ANYONE can walk into the bank and deposit it
 
 - Whoever deposits it = whoever pays the gas
 
- 
+In Penny.io's implementation, the platform wallet pays gas to provide a seamless user experience.
 
-In Penny.io's implementation, the **platform wallet pays gas** to provide a seamless user experience.
-
- 
-
-### Gas Cost Reality Check
-
- 
+Gas Cost Reality Check
 
 | Scenario | Gas Price | Cost per Payment | 1,000 Payments | 10,000 Payments |
 
@@ -559,35 +442,23 @@ In Penny.io's implementation, the **platform wallet pays gas** to provide a seam
 
 | Base L2 (congested) | ~0.01 Gwei | $0.0001 | $0.10 | $1.00 |
 
- 
-
-**At scale:**
+At scale:
 
 - 10,000 purchases = $0.50-$1.00 total gas
 
 - If avg article = $0.10, you earned $1,000
 
-- **Gas = 0.05-0.1% of revenue**
-
- 
+- Gas = 0.05-0.1% of revenue
 
 This is why x402 makes micropayments viable.
 
- 
-
 ---
 
- 
+Code Examples
 
-## Code Examples
+1. Building Payment Requirements (Backend)
 
- 
-
-### 1. Building Payment Requirements (Backend)
-
- 
-
-```typescript
+```
 
 // backend/src/routes.ts:152-194
 
@@ -605,19 +476,13 @@ function buildPaymentRequirement(
 
   const priceInMicroUSDC = (priceInCents * 10000).toString();
 
- 
-
   const asset = network === 'base'
 
     ? '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'  // USDC on Base
 
     : '0x036CbD53842c5426634e7929541eC2318f3dCF7e'; // USDC on Base Sepolia
 
- 
-
   const resourceUrl = `${req.protocol}://${req.get('host')}/api/articles/${article.id}/purchase?network=${network}`;
-
- 
 
   return {
 
@@ -675,27 +540,19 @@ function buildPaymentRequirement(
 
 ```
 
- 
+Key Features:
 
-**Key Features:**
+- Dynamic Pricing - Each article can have a different price
 
-- **Dynamic Pricing** - Each article can have a different price
+- Dynamic Recipients - Payments go directly to article authors
 
-- **Dynamic Recipients** - Payments go directly to article authors
-
-- **Network Flexibility** - Supports both mainnet (Base) and testnet (Base Sepolia)
-
- 
+- Network Flexibility - Supports both mainnet (Base) and testnet (Base Sepolia)
 
 ---
 
- 
+2. Payment Verification (Backend)
 
-### 2. Payment Verification (Backend)
-
- 
-
-```typescript
+```
 
 // backend/src/routes.ts:519-574
 
@@ -705,21 +562,15 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req, res) => {
 
   const article = await db.getArticleById(articleId);
 
- 
-
   if (!article) {
 
     return res.status(404).json({ success: false, error: 'Article not found' });
 
   }
 
- 
-
   const paymentRequirement = buildPaymentRequirement(article, req, networkPreference);
 
   const paymentHeader = req.headers['x-payment'];
-
- 
 
   // Step 1: If no X-PAYMENT header, return 402 with requirements
 
@@ -737,8 +588,6 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req, res) => {
 
   }
 
- 
-
   // Step 2: Decode and parse the payment payload
 
   let paymentPayload: PaymentPayload;
@@ -755,23 +604,17 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req, res) => {
 
   }
 
- 
-
   // Step 3: Verify amounts match
 
   const requiredAmount = BigInt(paymentRequirement.maxAmountRequired);
 
   const providedAmount = BigInt(paymentPayload.payload.authorization.value);
 
- 
-
   if (providedAmount < requiredAmount) {
 
     return res.status(400).json({ success: false, error: 'Insufficient payment amount' });
 
   }
-
- 
 
   // Step 4: Verify signature with facilitator (CDP or public)
 
@@ -789,8 +632,6 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req, res) => {
 
   }
 
- 
-
   // Step 5: Verify recipient matches article author
 
   const paymentRecipient = normalizeAddress(paymentPayload.payload.authorization.to);
@@ -801,8 +642,6 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req, res) => {
 
   }
 
- 
-
   // Step 6: Record payment and grant access
 
   // ... (continues with settlement and database recording)
@@ -811,29 +650,21 @@ router.post('/articles/:id/purchase', criticalLimiter, async (req, res) => {
 
 ```
 
- 
+Security Checks:
 
-**Security Checks:**
+1. [OK] Amount Verification - Ensures payment matches article price
 
-1. ✅ **Amount Verification** - Ensures payment matches article price
+2. [OK] Signature Verification - Uses CDP facilitator for cryptographic validation
 
-2. ✅ **Signature Verification** - Uses CDP facilitator for cryptographic validation
+3. [OK] Recipient Verification - Ensures payment goes to correct author
 
-3. ✅ **Recipient Verification** - Ensures payment goes to correct author
-
-4. ✅ **Duplicate Prevention** - Database UNIQUE constraint prevents double-spending
-
- 
+4. [OK] Duplicate Prevention - Database UNIQUE constraint prevents double-spending
 
 ---
 
- 
+3. Frontend Payment Orchestration
 
-### 3. Frontend Payment Orchestration
-
- 
-
-```typescript
+```
 
 // frontend/src/services/x402PaymentService.ts:161-199
 
@@ -861,8 +692,6 @@ async purchaseArticle(
 
     );
 
- 
-
     if (initialResponse.paymentRequired && initialResponse.paymentRequired.accept) {
 
       // Step 2: Create signed payment header
@@ -874,8 +703,6 @@ async purchaseArticle(
         walletClient
 
       );
-
- 
 
       // Step 3: Retry request with X-PAYMENT header
 
@@ -899,11 +726,7 @@ async purchaseArticle(
 
       );
 
- 
-
       const result = await response.json();
-
- 
 
       if (response.ok && result.success) {
 
@@ -921,8 +744,6 @@ async purchaseArticle(
 
       }
 
- 
-
       return {
 
         success: false,
@@ -934,8 +755,6 @@ async purchaseArticle(
       };
 
     }
-
- 
 
     throw new Error('No payment requirements returned from server');
 
@@ -957,27 +776,19 @@ async purchaseArticle(
 
 ```
 
- 
+User Experience:
 
-**User Experience:**
+- Single Signature - User only signs once (no multiple popups)
 
-- **Single Signature** - User only signs once (no multiple popups)
+- Fast Verification - ~2 second round-trip time
 
-- **Fast Verification** - ~2 second round-trip time
-
-- **Error Handling** - Clear error messages for debugging
-
- 
+- Error Handling - Clear error messages for debugging
 
 ---
 
- 
+4. Payment Tracking (Database)
 
-### 4. Payment Tracking (Database)
-
- 
-
-```typescript
+```
 
 // backend/src/database.ts:635-659
 
@@ -995,8 +806,6 @@ async recordPayment(
 
   const normalizedUserAddress = tryNormalizeAddress(userAddress) ?? userAddress;
 
- 
-
   const { error } = await supabase.from('payments').insert({
 
     article_id: articleId,
@@ -1012,8 +821,6 @@ async recordPayment(
     created_at: new Date().toISOString(),
 
   });
-
- 
 
   if (error) {
 
@@ -1031,19 +838,15 @@ async recordPayment(
 
   }
 
- 
-
   return true;
 
 }
 
 ```
 
- 
+Database Schema:
 
-**Database Schema:**
-
-```sql
+```
 
 CREATE TABLE payments (
 
@@ -1067,111 +870,73 @@ CREATE TABLE payments (
 
 ```
 
- 
+Key Features:
 
-**Key Features:**
+- Persistent Storage - Payments tracked across server restarts
 
-- **Persistent Storage** - Payments tracked across server restarts
+- Duplicate Prevention - UNIQUE constraint on (article_id, user_address)
 
-- **Duplicate Prevention** - UNIQUE constraint on (article_id, user_address)
-
-- **Transaction Tracking** - Records on-chain settlement hash when available
-
- 
+- Transaction Tracking - Records on-chain settlement hash when available
 
 ---
 
- 
+Security Considerations
 
-## Security Considerations
+1. Signature Security
 
- 
+Question: Can users pay without the wallet popup?
 
-### 1. Signature Security
+Answer: No. This is a fundamental blockchain security principle.
 
- 
-
-**Question:** Can users pay without the wallet popup?
-
- 
-
-**Answer:** No. This is a fundamental blockchain security principle.
-
- 
-
-In blockchain, **a signature = spending money**. You cannot spend someone's money without their explicit approval. The wallet popup MUST exist for security.
-
- 
+In blockchain, a signature = spending money. You cannot spend someone's money without their explicit approval. The wallet popup MUST exist for security.
 
 However, x402 IS optimized:
 
-- **Regular transaction:** Sign → Wait for blockchain confirmation → Slow (15+ seconds)
+- Regular transaction: Sign -> Wait for blockchain confirmation -> Slow (15+ seconds)
 
-- **x402 signature:** Sign → Instant verification → Fast (~2 seconds)
-
- 
+- x402 signature: Sign -> Instant verification -> Fast (~2 seconds)
 
 The popup is quick, but it exists for your protection.
 
- 
+2. Facilitator Trust Model
 
-### 2. Facilitator Trust Model
+Penny.io uses Coinbase Developer Platform (CDP) as the payment facilitator:
 
- 
+- [OK] Signature Verification - Validates EIP-712 signatures cryptographically
 
-Penny.io uses **Coinbase Developer Platform (CDP)** as the payment facilitator:
+- [OK] Balance Checking - Ensures user has sufficient USDC before authorization
 
- 
+- [OK] Gasless Settlement - CDP submits transactions on-chain (optional)
 
-- ✅ **Signature Verification** - Validates EIP-712 signatures cryptographically
+Fallback Strategy:
 
-- ✅ **Balance Checking** - Ensures user has sufficient USDC before authorization
+- If CDP keys configured -> Uses CDP facilitator
 
-- ✅ **Gasless Settlement** - CDP submits transactions on-chain (optional)
+- If no CDP keys -> Uses public facilitator
 
- 
+- If facilitator fails -> Payment rejected (safe failure mode)
 
-**Fallback Strategy:**
-
-- If CDP keys configured → Uses CDP facilitator
-
-- If no CDP keys → Uses public facilitator
-
-- If facilitator fails → Payment rejected (safe failure mode)
-
- 
-
-### 3. Duplicate Payment Prevention
-
- 
+3. Duplicate Payment Prevention
 
 Database-level protection:
 
- 
-
-```sql
+```
 
 UNIQUE(article_id, user_address)
 
 ```
 
- 
-
 This ensures:
 
-- ❌ User cannot pay twice for the same article
+- [X] User cannot pay twice for the same article
 
-- ❌ Backend cannot accidentally record duplicate payments
+- [X] Backend cannot accidentally record duplicate payments
 
-- ✅ First payment wins (idempotent operation)
+- [OK] First payment wins (idempotent operation)
 
- 
+4. Rate Limiting
 
-### 4. Rate Limiting
-
- 
-
-```typescript
+```
 
 const criticalLimiter = rateLimit({
 
@@ -1185,31 +950,21 @@ const criticalLimiter = rateLimit({
 
 ```
 
- 
-
 Prevents:
 
-- ❌ Payment spam attacks
+- [X] Payment spam attacks
 
-- ❌ Brute-force signature guessing
+- [X] Brute-force signature guessing
 
-- ❌ API abuse
-
- 
+- [X] API abuse
 
 ---
 
- 
+402 Payment Required Response
 
-## 402 Payment Required Response
+Example Payload
 
- 
-
-### Example Payload
-
- 
-
-```json
+```
 
 {
 
@@ -1287,61 +1042,43 @@ Prevents:
 
 ```
 
- 
-
-**Field Explanations:**
-
- 
+Field Explanations:
 
 | Field | Description |
 
 |-------|-------------|
 
-| `scheme` | Payment scheme (exact = fixed price) |
+| scheme | Payment scheme (exact = fixed price) |
 
-| `network` | Target blockchain (base, base-sepolia, etc.) |
+| network | Target blockchain (base, base-sepolia, etc.) |
 
-| `maxAmountRequired` | Price in micro-USDC (120000 = $0.12) |
+| maxAmountRequired | Price in micro-USDC (120000 = $0.12) |
 
-| `resource` | API endpoint to retry with payment |
+| resource | API endpoint to retry with payment |
 
-| `payTo` | Author's wallet address (dynamic per article) |
+| payTo | Author's wallet address (dynamic per article) |
 
-| `asset` | USDC contract address on target network |
+| asset | USDC contract address on target network |
 
-| `extra.pricing` | Human-readable price display |
-
- 
+| extra.pricing | Human-readable price display |
 
 ---
 
- 
+CDP Integration
 
-## CDP Integration
-
- 
-
-### Using Coinbase Developer Platform
-
- 
+Using Coinbase Developer Platform
 
 Penny.io integrates with CDP for:
 
- 
+1. Signature Verification - Validates EIP-712 authorization signatures
 
-1. **Signature Verification** - Validates EIP-712 authorization signatures
+2. Balance Checking - Ensures user has sufficient USDC
 
-2. **Balance Checking** - Ensures user has sufficient USDC
+3. Gasless Settlement - CDP submits transactions on-chain (optional)
 
-3. **Gasless Settlement** - CDP submits transactions on-chain (optional)
+Configuration:
 
- 
-
-**Configuration:**
-
- 
-
-```typescript
+```
 
 const facilitator = process.env.CDP_API_KEY_NAME && process.env.CDP_API_KEY_PRIVATE_KEY
 
@@ -1351,65 +1088,42 @@ const facilitator = process.env.CDP_API_KEY_NAME && process.env.CDP_API_KEY_PRIV
 
 ```
 
- 
+Benefits:
 
-**Benefits:**
+- [OK] "Powered by Coinbase" trust signal
 
-- ✅ **"Powered by Coinbase"** trust signal
+- [OK] Enterprise-grade security and uptime
 
-- ✅ **Enterprise-grade security** and uptime
-
-- ✅ **Gasless transactions** for users (platform pays gas)
-
- 
+- [OK] Gasless transactions for users (platform pays gas)
 
 ---
 
- 
+Conclusion
 
-## Conclusion
+x402 makes micropayments economically viable by separating authorization from settlement.
 
- 
+- Users sign once and get instant access
 
-**x402 makes micropayments economically viable** by separating authorization from settlement.
+- Authors receive direct wallet-to-wallet payments
 
- 
-
-- **Users** sign once and get instant access
-
-- **Authors** receive direct wallet-to-wallet payments
-
-- **Platform** pays minimal gas costs ($0.0001 per payment on Base)
-
- 
+- Platform pays minimal gas costs ($0.0001 per payment on Base)
 
 This is the future of content monetization.
 
- 
+---
+
+Learn More
+
+- Try Penny.io: https://penny.io
+
+- GitHub Repository: https://github.com/mbeliogl/Penny.io
+
+- x402 Specification: https://x402.org
+
+- Coinbase Developer Platform: https://cdp.coinbase.com
 
 ---
 
- 
-
-## Learn More
-
- 
-
-- **Try Penny.io:** [https://penny.io](https://penny.io)
-
-- **GitHub Repository:** [https://github.com/mbeliogl/Penny.io](https://github.com/mbeliogl/Penny.io)
-
-- **x402 Specification:** [https://x402.org](https://x402.org)
-
-- **Coinbase Developer Platform:** [https://cdp.coinbase.com](https://cdp.coinbase.com)
-
- 
-
----
-
- 
-
-**Built on Base • Powered by x402 • Open Source**
- 
+Built on Base • Powered by x402 • Open Source
 
 *Last Updated: November 2025*

@@ -1182,6 +1182,97 @@ main {
   color: #536471;
 }
 
+.wallet-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(248, 250, 252, 0.6);
+  box-shadow: none;
+  min-width: 0;
+}
+
+.wallet-summary-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+}
+
+.wallet-summary-line {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 2px;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.wallet-summary-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.wallet-summary-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.wallet-summary-trigger-wrapper {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.wallet-summary-trigger {
+  --plus_borderColor: rgba(15, 23, 42, 0.2);
+  --plus_backgroundColor: rgba(248, 250, 252, 0.85);
+  --plus_triangleColor: rgba(226, 232, 240, 0.9);
+  --plus_iconColor: #0f172a;
+  --plus_iconHoverColor: #0f172a;
+  --plus_hoverBackgroundColor: rgba(248, 250, 252, 1);
+  --plus_hoverBorderColor: rgba(15, 23, 42, 0.35);
+  --plus_sideLength: 1.85rem;
+}
+
+.wallet-summary-trigger:hover,
+.wallet-summary-trigger:focus-visible {
+  --plus_backgroundColor: #ffffff;
+  --plus_borderColor: rgba(15, 23, 42, 0.35);
+  --plus_triangleColor: rgba(148, 163, 184, 0.35);
+}
+
+.wallet-summary-trigger.has-secondary {
+  --plus_backgroundColor: rgba(248, 250, 252, 0.9);
+  --plus_borderColor: rgba(15, 23, 42, 0.3);
+  --plus_triangleColor: rgba(15, 23, 42, 0.25);
+  --plus_iconColor: #0f172a;
+  --plus_iconHoverColor: #0f172a;
+  --plus_hoverBackgroundColor: rgba(255, 255, 255, 1);
+  --plus_hoverBorderColor: rgba(15, 23, 42, 0.4);
+}
+
+.wallet-summary-trigger.has-secondary .plusIcon {
+  transition: color 0.2s ease;
+}
+
+.wallet-summary-trigger.has-secondary:hover .plusIcon,
+.wallet-summary-trigger.has-secondary:focus-visible .plusIcon {
+  transform: none;
+}
+
 .wallet-info {
   text-align: right;
   font-size: 0.875rem;
@@ -1369,6 +1460,18 @@ main {
 @media (max-width: 768px) {
   .wallet-info-card {
     width: 100%;
+  }
+
+  .wallet-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .wallet-summary-trigger-wrapper {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .wallet-info-row {
@@ -11389,6 +11492,7 @@ main {
   border: 1px solid rgba(226, 232, 240, 0.9);
   background: #fff;
   box-shadow: 0 25px 70px rgba(15, 23, 42, 0.12);
+  position: relative;
 }
 
 .wallet-card h3 {
@@ -11400,32 +11504,67 @@ main {
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.95rem;
   color: #475569;
-  margin: 0 0 12px;
+  margin: 0;
+  line-height: 1.4;
 }
 
 .wallet-card__badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  border-radius: 999px;
-  color: #fff;
-  letter-spacing: 0.08em;
+  padding: 6px;
+  overflow: hidden;
 }
 
-.wallet-card__meta {
+.wallet-card__badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.wallet-card__badge span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+.wallet-card__badge--base {
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.wallet-card__badge--solana {
+  border-color: rgba(5, 150, 105, 0.35);
+}
+
+.wallet-card__status-badge {
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+  opacity: 0.6;
+}
+
+.wallet-card__content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-.wallet-card__status {
-  font-size: 0.85rem;
-  color: #0f172a;
-  font-weight: 600;
+.wallet-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .wallet-card__ghost {
@@ -11448,19 +11587,21 @@ main {
 
 .wallet-lab__form {
   border-radius: 24px;
-  background: #050b17;
-  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(175deg, #f8fafc 0%, #ffffff 70%);
+  color: #0f172a;
   padding: 30px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  box-shadow: 0 30px 90px rgba(5, 11, 23, 0.5);
+  gap: 20px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.12);
 }
 
 .wallet-lab__form-head {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  color: #0f172a;
 }
 
 .wallet-lab__form-head h4 {
@@ -11469,7 +11610,7 @@ main {
 
 .wallet-lab__form-head p {
   margin: 0;
-  color: rgba(226, 232, 240, 0.8);
+  color: #64748b;
 }
 
 .wallet-lab__form label {
@@ -11477,19 +11618,26 @@ main {
   flex-direction: column;
   gap: 8px;
   font-size: 0.9rem;
-  color: rgba(226, 232, 240, 0.85);
+  color: #475569;
 }
 
 .wallet-lab__form input {
   border-radius: 14px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  background: rgba(15, 23, 42, 0.55);
-  color: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
   padding: 12px 14px;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.wallet-lab__form input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
 }
 
 .wallet-lab__form input::placeholder {
-  color: rgba(226, 232, 240, 0.4);
+  color: rgba(100, 116, 139, 0.7);
 }
 
 .wallet-lab__form-actions {
@@ -11500,22 +11648,40 @@ main {
 
 .wallet-lab__primary {
   border: none;
-  background: linear-gradient(135deg, #38bdf8, #6366f1);
-  color: #fff;
-  border-radius: 999px;
-  padding: 10px 18px;
+  background: linear-gradient(135deg, #111827, #0f172a);
+  color: #f8fafc;
+  border-radius: 14px;
+  padding: 12px 20px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wallet-lab__primary:hover,
+.wallet-lab__primary:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.45);
 }
 
 .wallet-lab__ghost {
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  background: transparent;
-  color: #e2e8f0;
-  border-radius: 999px;
-  padding: 10px 18px;
+  border: 1px solid rgba(15, 23, 42, 0.25);
+  background: rgba(15, 23, 42, 0.02);
+  color: #0f172a;
+  border-radius: 14px;
+  padding: 12px 20px;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.wallet-lab__ghost:hover,
+.wallet-lab__ghost:focus-visible {
+  border-color: rgba(15, 23, 42, 0.4);
+  color: #111827;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.2);
 }
 
 .wallet-lab__status {
@@ -11524,20 +11690,89 @@ main {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 12px;
-  background: rgba(74, 222, 128, 0.15);
-  color: #86efac;
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
   font-weight: 600;
 }
 
 .wallet-lab__status--error {
-  background: rgba(248, 113, 113, 0.18);
-  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
 }
 
 .wallet-lab__error {
-  color: #fca5a5;
+  color: #b91c1c;
   font-size: 0.85rem;
   margin: 0;
+}
+
+.payout-confirm-overlay {
+  background: rgba(4, 6, 15, 0.75);
+  backdrop-filter: blur(4px);
+  padding: 24px;
+}
+
+.payout-confirm {
+  width: min(460px, 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #f7fafc 100%);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 40px 120px rgba(15, 23, 42, 0.22);
+  text-align: left;
+}
+
+.payout-confirm h3 {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.payout-confirm p {
+  margin: 0 0 20px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.payout-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-ghost,
+.btn-danger {
+  border-radius: 14px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn-ghost {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: rgba(248, 250, 252, 0.9);
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.btn-ghost:hover,
+.btn-ghost:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.2);
+}
+
+.btn-danger {
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.35);
+}
+
+.btn-danger:hover,
+.btn-danger:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(220, 38, 38, 0.45);
 }
 
 .paywall-connect-panel {
@@ -11574,54 +11809,71 @@ main {
 }
 
 .plusButton {
-  --plus_sideLength: 2.5rem;
-  --plus_topRightTriangleSideLength: 0.9rem;
+  --plus_sideLength: 2rem;
+  --plus_borderColor: rgba(26, 26, 26, 0.1);
+  --plus_backgroundColor: #f8f9fa;
+  --plus_hoverBackgroundColor: rgba(26, 26, 26, 0.08);
+  --plus_hoverBorderColor: rgba(26, 26, 26, 0.12);
+  --plus_iconColor: #0f172a;
+  --plus_iconHoverColor: #0f172a;
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 1px solid white;
+  border: 1px solid var(--plus_borderColor);
   width: var(--plus_sideLength);
   height: var(--plus_sideLength);
-  background-color: #000000;
+  background-color: var(--plus_backgroundColor);
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
 }
 
 .plusButton::before {
-  position: absolute;
   content: "";
+  position: absolute;
   top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-width: 0 var(--plus_topRightTriangleSideLength) var(--plus_topRightTriangleSideLength) 0;
-  border-style: solid;
-  border-color: transparent white transparent transparent;
-  transition: var(--plusTransition, 0.2s);
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(26, 26, 26, 0.05), transparent);
+  transition: left 0.5s ease;
 }
 
 .plusButton:hover,
 .plusButton:focus-visible {
   cursor: pointer;
+  background-color: var(--plus_hoverBackgroundColor, var(--plus_backgroundColor));
+  border-color: var(--plus_hoverBorderColor, var(--plus_borderColor));
+}
+
+.plusButton:active {
+  transform: scale(0.92);
 }
 
 .plusButton:hover::before,
 .plusButton:focus-visible::before {
-  --plus_topRightTriangleSideLength: calc(var(--plus_sideLength) * 2);
+  left: 100%;
 }
 
 .plusIcon {
-  fill: white;
+  color: var(--plus_iconColor);
+  stroke: var(--plus_iconColor);
+  fill: none;
   width: calc(var(--plus_sideLength) * 0.7);
   height: calc(var(--plus_sideLength) * 0.7);
   z-index: 1;
-  transition: transform 0.2s ease, fill 0.2s ease;
+  transition: transform 0.2s ease, color 0.2s ease, stroke 0.2s ease;
+}
+
+.plusIcon > * {
+  stroke: currentColor;
 }
 
 .plusButton:hover .plusIcon,
 .plusButton:focus-visible .plusIcon {
-  fill: black;
+  color: var(--plus_iconHoverColor, var(--plus_iconColor));
+  stroke: var(--plus_iconHoverColor, var(--plus_iconColor));
   transform: rotate(180deg);
 }
 

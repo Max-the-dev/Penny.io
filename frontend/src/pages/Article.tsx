@@ -760,7 +760,7 @@ function Article() {
                       <div className="method-header">
                         <div>
                           <p>Select Chain</p>
-                          <span>More options coming soon</span>
+                          <span>More networks coming soon</span>
                         </div>
                       </div>
                       <div className="method-grid">
