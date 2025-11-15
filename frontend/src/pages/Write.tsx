@@ -28,7 +28,7 @@ import { Editor } from '@tinymce/tinymce-react';
 import { extractPlainText } from '../utils/htmlUtils';
 
 function Write() {
-  const { isConnected, address } = useWallet();
+  const { isConnected, isConnecting, address } = useWallet();
   const location = useLocation();
 
   // Category emojis for visual enhancement
@@ -733,7 +733,7 @@ function Write() {
     : [];
   const hasSummaryErrors = summaryMessages.length > 0;
 
-  if (!isConnected) {
+  if (!isConnected && !isConnecting) {
     return (
       <div className="connect-state connect-state--full">
         <ConnectPromptHero

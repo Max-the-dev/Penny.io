@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import ConnectPromptHero, { dashboardHighlights } from '../components/ConnectPromptHero';
+import AppKitConnectButton from '../components/AppKitConnectButton';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -19,6 +20,11 @@ import {
   PlusCircle,
   CheckCircle,
   Send,
+  WalletMinimal,
+  ShieldCheck,
+  Copy,
+  Check,
+  Plus,
 } from 'lucide-react';
 import { isDateWithinRange, getRelativeTimeString } from '../utils/dateUtils';
 import { extractPlainText } from '../utils/htmlUtils';
@@ -41,6 +47,11 @@ const truncateAddress = (value?: string | null) => {
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 };
 
+const networkSwatches: Record<NetworkFamily, { label: string; color: string }> = {
+  base: { label: 'Base', color: '#2563eb' },
+  solana: { label: 'Solana', color: '#16a34a' },
+};
+
 const getNetworkFamily = (network?: SupportedAuthorNetwork | null): NetworkFamily => {
   if (!network) return 'base';
   return network.includes('solana') ? 'solana' : 'base';
@@ -48,9 +59,17 @@ const getNetworkFamily = (network?: SupportedAuthorNetwork | null): NetworkFamil
 
 const getNetworkLabel = (family: NetworkFamily) => (family === 'solana' ? 'Solana' : 'Base');
 
+const normalizeWalletForComparison = (value?: string | null): string | null => {
+  if (!value) return null;
+  if (value.startsWith('0x')) {
+    return value.toLowerCase();
+  }
+  return value;
+};
+
 
 function Dashboard() {
-  const { isConnected, address, balance } = useWallet();
+  const { isConnected, isConnecting, address, balance, disconnect } = useWallet();
   const navigate = useNavigate();
 
   // Available categories (must match backend validation schema)
@@ -96,13 +115,32 @@ function Dashboard() {
   const [draftConfirmPublish, setDraftConfirmPublish] = useState<Draft | null>(null);
   const [isDeletingDraft, setIsDeletingDraft] = useState(false);
   const [isPublishingDraft, setIsPublishingDraft] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<'primary' | 'secondary' | null>(null);
   const [purchases7d, setPurchases7d] = useState(0);
-  const [showPayoutForm, setShowPayoutForm] = useState(false);
   const [secondaryAddressInput, setSecondaryAddressInput] = useState('');
   const [payoutStatus, setPayoutStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSavingPayout, setIsSavingPayout] = useState(false);
   const [secondaryAddressError, setSecondaryAddressError] = useState('');
   const [isRemovingPayout, setIsRemovingPayout] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] = useState<
+    | null
+    | {
+        type: 'remove' | 'replace';
+        payload?: { newAddress?: string; previousAddress?: string };
+      }
+  >(null);
+
+  const openWalletModal = () => {
+    setShowWalletModal(true);
+  };
+
+  const closeWalletModal = () => {
+    setShowWalletModal(false);
+    resetSecondaryForm(); //existing helper later in the file
+  }
+  
+  const [showPayoutConfirm, setShowPayoutConfirm] = useState(false);
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -451,8 +489,9 @@ function Dashboard() {
 
       if (response.success && response.data) {
         setAuthor(response.data);
-        setShowPayoutForm(false);
+        reconcileWalletSession(response.data);
         setSecondaryAddressInput('');
+        setPayoutStatus({ type: 'success', message: 'Secondary wallet saved.' });
       } else {
         setPayoutStatus({ type: 'error', message: response.error || 'Failed to save payout method.' });
       }
@@ -503,7 +542,7 @@ function Dashboard() {
 
       if (response.success && response.data) {
         setAuthor(response.data);
-        setShowPayoutForm(false);
+        reconcileWalletSession(response.data);
         setSecondaryAddressInput('');
         setSecondaryAddressError('');
         setPayoutStatus({
@@ -527,6 +566,68 @@ function Dashboard() {
     }
   };
 
+  const handleCopyWallet = (value?: string | null, type: 'primary' | 'secondary') => {
+    if (!value) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(() => {
+        setCopiedAddress(type);
+        setTimeout(() => setCopiedAddress(null), 1500);
+      });
+    }
+  };
+
+  const resetSecondaryForm = () => {
+    setSecondaryAddressInput(author?.secondaryPayoutAddress || '');
+    setSecondaryAddressError('');
+    setPayoutStatus(null);
+  };
+
+  const handleCloseWalletModal = () => {
+    setShowWalletModal(false);
+    resetSecondaryForm();
+    setCopiedAddress(null);
+  };
+
+  const requestPayoutChange = (
+    type: "remove" | "replace",
+    payload?: {newAddress?: string}
+  ) => {
+    setPendingConfirmation({type, payload});
+    setShowPayoutConfirm(true);
+  };
+
+  const handleConfirmPayoutChange = async () => {
+    if (!pendingConfirmation) return;
+
+    setShowPayoutConfirm(false);
+
+    if (pendingConfirmation.type === 'replace') {
+      await handleSaveSecondaryPayout();
+    } else if (pendingConfirmation.type === 'remove') {
+      await handleRemoveSecondaryPayout();
+    }
+  };
+
+  const reconcileWalletSession = (nextAuthor: Autthor) => {
+    const connected = normalizeWalletForComparison(address);
+    const primary = normalizeWalletForComparison(nextAuthor.address);
+    const secondary = normalizeWalletForComparison(nextAuthor.secondaryPayoutAddress);
+
+    if (!connected) return;
+
+    const stillLinked = connected === primary || connected === secondary;
+
+    if (!stillLinked) {
+      // User was connected with the removed secondary; force them to reconnect 
+      disconnect();
+      setShowWalletModal(false);
+      setPayoutStatus({
+        type: 'error',
+        message: 'Secondary wallet removed. Reconnect with your primary wallet to continue.',
+      });
+    }
+  };
+
   // Clear search and filters function
   const clearSearch = () => {
     setSearchTerm('');
@@ -539,7 +640,7 @@ function Dashboard() {
 
   const error = articleError || authorError;
 
-  if (!isConnected) {
+  if (!isConnected && !isConnecting) {
     return (
       <div className="connect-state connect-state--full">
         <ConnectPromptHero
@@ -559,113 +660,55 @@ function Dashboard() {
             <LayoutDashboard size={25} /> Writer Dashboard
           </h1>
           {author && (
-            <div className="wallet-info-card">
-              <div className="wallet-info-row">
+            <div className="wallet-summary">
+              <div className="wallet-summary-row">
                 <div>
-                  <p className="wallet-label">
+                  <p className="wallet-summary-label">
                     Primary wallet
                     <span className={`network-badge network-badge--${primaryNetworkFamily}`}>
                       {getNetworkLabel(primaryNetworkFamily)}
                     </span>
                   </p>
-                  <p className="wallet-address">{truncateAddress(author.address || address)}</p>
+                  <p className="wallet-summary-address">
+                    {truncateAddress(author.address || address)}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  className="wallet-manage-btn"
-                  onClick={() => {
-                    setShowPayoutForm(prev => !prev);
-                    setPayoutStatus(null);
-                    setSecondaryAddressInput(author.secondaryPayoutAddress || '');
-                    setSecondaryAddressError('');
-                  }}
-                >
-                  {author.secondaryPayoutAddress ? (
-                    <>
-                      <CheckCircle size={16} /> Manage payout methods
-                    </>
-                  ) : (
-                    <>
-                      <PlusCircle size={16} /> Add secondary wallet
-                    </>
-                  )}
-                </button>
               </div>
-              <div className={`wallet-secondary ${author.secondaryPayoutAddress ? '' : 'placeholder'}`}>
-                {author.secondaryPayoutAddress ? (
-                  <>
-                    <span className="wallet-label">
+
+              {author.secondaryPayoutAddress && (
+                <div className="wallet-summary-row">
+                  <div>
+                    <p className="wallet-summary-label">
                       Secondary wallet
                       <span className={`network-badge network-badge--${secondaryDisplayFamily}`}>
                         {getNetworkLabel(secondaryDisplayFamily)}
                       </span>
-                    </span>
-                    <p className="wallet-address">{truncateAddress(author.secondaryPayoutAddress)}</p>
-                    <button
-                      type="button"
-                      className="wallet-remove-btn"
-                      onClick={handleRemoveSecondaryPayout}
-                      disabled={isRemovingPayout}
-                    >
-                      {isRemovingPayout ? 'Removing...' : 'Remove wallet'}
-                    </button>
-                  </>
-                ) : (
-                  <span>No secondary wallet connected yet.</span>
-                )}
-              </div>
-              <p className="wallet-note">
-                Only one wallet per network. Replace or remove your secondary wallet whenever you need.
-              </p>
-              {showPayoutForm && (
-                <div className="wallet-form">
-                  <p className="wallet-label small">
-                    Secondary network • {getNetworkLabel(complementaryNetworkFamily)}
-                  </p>
-                  <input
-                    type="text"
-                    placeholder={`Enter ${getNetworkLabel(complementaryNetworkFamily)} wallet address`}
-                    value={secondaryAddressInput}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setSecondaryAddressInput(nextValue);
-                      if (secondaryAddressError) {
-                        setSecondaryAddressError(validateSecondaryAddress(nextValue));
-                      }
-                    }}
-                  />
-                  {secondaryAddressError && (
-                    <p className="wallet-input-error">{secondaryAddressError}</p>
-                  )}
-                  {payoutStatus && (
-                    <div className={`wallet-status ${payoutStatus.type}`}>
-                      {payoutStatus.message}
-                    </div>
-                  )}
-                  <div className="wallet-form-actions">
-                    <button
-                      type="button"
-                      className="tip-submit-button"
-                      onClick={handleSaveSecondaryPayout}
-                      disabled={isSavingPayout || !canSaveSecondary}
-                    >
-                      {isSavingPayout ? 'Saving...' : 'Save wallet'}
-                    </button>
-                    <button
-                      type="button"
-                      className="wallet-cancel-btn"
-                      onClick={() => {
-                        setShowPayoutForm(false);
-                        setPayoutStatus(null);
-                        setSecondaryAddressInput('');
-                        setSecondaryAddressError('');
-                      }}
-                    >
-                      Cancel
-                    </button>
+                    </p>
+                    <p className="wallet-summary-address">
+                      {truncateAddress(author.secondaryPayoutAddress)}
+                    </p>
                   </div>
                 </div>
               )}
+
+              <button
+                type="button"
+                className="wallet-summary-manage"
+                onClick={openWalletModal}
+                aria-label="Manage payout methods"
+              >
+                {author.secondaryPayoutAddress ? (
+                  <>
+                    <Edit size={16} />
+                    Manage payout methods
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle size={16} />
+                    Add secondary wallet
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
@@ -938,8 +981,20 @@ function Dashboard() {
       </div>
 
       {showDraftsModal && (
-        <div className="modal-overlay">
-          <div className="drafts-modal" role="dialog" aria-modal="true" aria-labelledby="drafts-modal-title">
+        <div className="modal-overlay"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closeDraftsModal();
+            }
+          }}
+          >
+          <div className="drafts-modal" 
+            role="dialog" 
+            aria-modal="true" 
+            aria-labelledby="drafts-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          
+          >
             <div className="drafts-modal-header">
               <h3 id="drafts-modal-title">Saved Drafts</h3>
               <button 
@@ -1126,6 +1181,191 @@ function Dashboard() {
             </div>
           </div>
         )}
+
+      {showWalletModal && (
+        <div
+          className="modal-overlay wallet-lab-overlay"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              handleCloseWalletModal();
+            }
+          }}
+        >
+          <div
+            className="wallet-lab__surface wallet-lab__surface--modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="wallet-lab__close"
+              onClick={handleCloseWalletModal}
+              aria-label="Close wallet management modal"
+            >
+              ×
+            </button>
+            <header className="wallet-lab__header">
+              <div>
+                <p className="wallet-lab__eyebrow">Wallet Management</p>
+                <h1>Control where earnings pay out</h1>
+                <p>Keep a primary {getNetworkLabel(primaryNetworkFamily)} wallet and route payouts to a secondary address.</p>
+              </div>
+            </header>
+
+            <div className="wallet-lab__grid">
+              <div className="wallet-lab__cards">
+                <article className="wallet-card wallet-card--primary">
+                  <div
+                    className="wallet-card__badge"
+                    style={{ backgroundColor: networkSwatches[primaryNetworkFamily].color }}
+                  >
+                    {networkSwatches[primaryNetworkFamily].label}
+                  </div>
+                  <h3>Primary wallet</h3>
+                  <p className="wallet-card__address">
+                    {truncateAddress(author?.address || address)}
+                  </p>
+                  <div className="wallet-card__meta">
+                    <span className="wallet-card__status">Connected</span>
+                    <button
+                      type="button"
+                      className="wallet-card__ghost"
+                      onClick={() => handleCopyWallet(author?.address || address, 'primary')}
+                    >
+                      <Copy size={14} />
+                      {copiedAddress === 'primary' ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </article>
+
+                <article className="wallet-card wallet-card--secondary">
+                  <div
+                    className="wallet-card__badge"
+                    style={{ backgroundColor: networkSwatches[secondaryDisplayFamily].color }}
+                  >
+                    {networkSwatches[secondaryDisplayFamily].label}
+                  </div>
+                  <h3>Secondary wallet</h3>
+                  {secondaryWalletExists ? (
+                    <>
+                      <p className="wallet-card__address">
+                        {truncateAddress(author?.secondaryPayoutAddress)}
+                      </p>
+                      <div className="wallet-card__meta">
+                        <span className="wallet-card__status">Connected</span>
+                        <div className="wallet-card__meta">
+                          <button
+                            type="button"
+                            className="wallet-card__ghost"
+                            onClick={() => handleCopyWallet(author?.secondaryPayoutAddress, 'secondary')}
+                          >
+                            <Copy size={14} />
+                            {copiedAddress === 'secondary' ? 'Copied' : 'Copy'}
+                          </button>
+                          <button
+                            type="button"
+                            className="wallet-card__ghost"
+                            onClickCapture={() => requestPayoutChange('remove')}
+                            disabled={isRemovingPayout}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="wallet-card__placeholder">
+                      <WalletMinimal size={20} />
+                      <span>Add a Solana payout address</span>
+                    </div>
+                  )}
+                </article>
+              </div>
+
+              <div className="wallet-lab__form">
+                <div className="wallet-lab__form-head">
+                  <ShieldCheck size={18} />
+                  <div>
+                    <h4>Route {getNetworkLabel(complementaryNetworkFamily)} payouts</h4>
+                    <p>Only one wallet per network. Replace it anytime.</p>
+                  </div>
+                </div>
+                <label>
+                  Solana USDC address
+                  <input
+                    type="text"
+                    placeholder={`Enter ${getNetworkLabel(complementaryNetworkFamily)} wallet address`}
+                    value={secondaryAddressInput}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setSecondaryAddressInput(nextValue);
+                      if (secondaryAddressError) {
+                        setSecondaryAddressError(validateSecondaryAddress(nextValue));
+                      }
+                    }}
+                  />
+                </label>
+                {secondaryAddressError && (
+                  <p className="wallet-lab__error">{secondaryAddressError}</p>
+                )}
+                {payoutStatus && (
+                  <div className={`wallet-lab__status wallet-lab__status--${payoutStatus.type}`}>
+                    <ShieldCheck size={16} />
+                    <span>{payoutStatus.message}</span>
+                  </div>
+                )}
+                <div className="wallet-lab__form-actions">
+                  <button
+                    type="button"
+                    className="wallet-lab__primary"
+                    onClick={() => requestPayoutChange('replace')}
+                    disabled={isSavingPayout || !canSaveSecondary}
+                  >
+                    {isSavingPayout ? 'Saving…' : 'Save wallet'}
+                  </button>
+                  <button
+                    type="button"
+                    className="wallet-lab__ghost"
+                    onClick={resetSecondaryForm}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {showPayoutConfirm && pendingConfirmation && (
+        <div className="modal-overlay payout-confirm-overlay">
+          <div className="payout-confirm">
+            <h3>Confirm wallet change</h3>
+            <p>
+              Make sure you still have access to your primary wallet. Removing or replacing
+              this secondary payout method will sign you out unless you reconnect.
+            </p>
+            <div className="payout-confirm__actions">
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  setShowPayoutConfirm(false);
+                  setPendingConfirmation(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={handleConfirmPayoutChange}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+        </div>
+        
+      )}
     </div>
   );
 }

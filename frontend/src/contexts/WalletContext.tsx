@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useBalance } from 'wagmi';
-import { useAppKitAccount } from '@reown/appkit/react';
+import { useAppKitAccount, useDisconnect } from '@reown/appkit/react';
 import { apiService } from '../services/api';
 
 interface WalletContextType {
@@ -18,7 +18,8 @@ interface WalletProviderProps {
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  const { address, status, isConnected, disconnect } = useAppKitAccount();
+  const { address, status, isConnected } = useAppKitAccount();
+  const { disconnect } = useDisconnect();
   const isConnecting = status === 'connecting';
   const isEvmAddress = Boolean(address && address.startsWith('0x'));
   const { data: balance } = useBalance({

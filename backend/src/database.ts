@@ -61,21 +61,30 @@ class Database {
 
     const primaryWallet = sortedWallets.find(wallet => wallet.isPrimary) || null;
     const secondaryWallet = sortedWallets.find(wallet => !wallet.isPrimary) || null;
-    const supportedNetworks = sortedWallets.length
-      ? Array.from(new Set(sortedWallets.map(wallet => wallet.network)))
-      : [];
-    const primaryNetwork = (primaryWallet?.network || 'base') as SupportedAuthorNetwork;
-    if (!supportedNetworks.length) {
-      supportedNetworks.push(primaryNetwork);
-    }
+    const rowPrimaryNetwork = (row.primary_payout_network ||
+      primaryWallet?.network ||
+      'base') as SupportedAuthorNetwork;
+    const rowSecondaryNetwork = (row.secondary_payout_network ||
+      secondaryWallet?.network ||
+      undefined) as SupportedAuthorNetwork | undefined;
+
+    const supportedNetworks = Array.from(
+      new Set(
+        [
+          rowPrimaryNetwork,
+          rowSecondaryNetwork,
+          ...sortedWallets.map(wallet => wallet.network),
+        ].filter(Boolean)
+      )
+    ) as SupportedAuthorNetwork[];
 
     return {
       authorUuid: row.author_uuid,
       address: row.address,
-      primaryPayoutNetwork: primaryNetwork,
+      primaryPayoutNetwork: rowPrimaryNetwork,
       primaryPayoutAddress: primaryWallet?.address || row.address,
-      secondaryPayoutNetwork: secondaryWallet?.network || undefined,
-      secondaryPayoutAddress: secondaryWallet?.address || undefined,
+      secondaryPayoutNetwork: rowSecondaryNetwork,
+      secondaryPayoutAddress: secondaryWallet?.address || row.secondary_payout_address || undefined,
       createdAt: row.created_at,
       totalEarnings: parseFloat(row.total_earnings) || 0,
       totalArticles: row.total_articles || 0,

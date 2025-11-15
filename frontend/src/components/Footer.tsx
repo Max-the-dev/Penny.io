@@ -53,7 +53,7 @@ function Footer() {
   ];
 
   const solanaAddress = 'cAXdcMFHK6y9yTP7AMETzXC7zvTeDBbQ5f4nvSWDx51';
-  const baseAddress = '0x6945890b1c074414b813c7643ae10117dec1c8e7';
+  const baseAddress = '0xEc115640B09416a59fE77e4e7b852fE700Fa6bF1';
   const predefinedAmounts = [1, 5, 25, 50];
   const DONATION_STORAGE_KEY = 'penny:lastDonation';
   const DONATION_NETWORK_META: Record<'base' | 'solana', { title: string; icon: string }> = {

@@ -20,6 +20,7 @@ import Contact from './pages/Contact';
 import X402Test from './pages/X402Test';
 import Explore from './pages/Explore';
 import Whitepaper from './pages/Whitepaper';
+import NotFound from './pages/NotFound';
 import './App.css'
 
 // Inner component that uses the wallet connection manager
@@ -48,7 +49,8 @@ function AppContent() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/x402-test" element={<X402Test />} />
           <Route path="/explore" element={<Explore />} />
-        </Routes>
+          <Route path="*" element={<NotFound />} />
+       </Routes>
       </main>
       <Footer />
     </>
