@@ -365,7 +365,7 @@ For x402 end-to-end verification, use the `/x402-test` page to simulate:
 
 ## Additional Resources
 
-- [`x402-technical-documentation] - In depth x402 protocol / technical implementation doc.
+- [x402-technical-documentation] - In depth x402 protocol / technical implementation doc.
 - [Writer's Toolkit] - Short guide on how to success as a writer on Penny.
 - [Wallet_Mgmt] - How to safely manage your platform-connected wallets. 
 
