@@ -11950,78 +11950,62 @@ main {
 
 .editor-block {
   margin-bottom: 28px;
-  opacity: 0;
-  transform: translateY(14px);
   transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.editor-block.pending {
+  opacity: 1;
+  transform: none;
 }
 
 .editor-block.revealed {
   opacity: 1;
   transform: translateY(0);
+  animation: fadeInUp 0.4s ease;
 }
 
-.editor-insert-button {
-  width: 100%;
-  border: 1px dashed rgba(148, 163, 184, 0.6);
-  border-radius: 16px;
-  padding: 20px;
-  font-size: 1rem;
-  font-weight: 600;
+.editor-section-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.editor-section-body > * {
+  margin: 0 0 18px;
   color: #0f172a;
-  background: rgba(248, 250, 252, 0.6);
+  line-height: 1.75;
+}
+
+.editor-section-body ul,
+.editor-section-body ol {
+  padding-left: 22px;
+  color: #374151;
+}
+
+.editor-placeholder {
+  border-top: 1px dashed rgba(148, 163, 184, 0.6);
+  padding: 18px 0;
+  color: #94a3b8;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  justify-content: center;
-  cursor: pointer;
-  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.85rem;
 }
 
-.editor-insert-button:hover {
-  border-color: #0f172a;
-  background: #ffffff;
-  transform: translateY(-2px);
+.text-reveal {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: textReveal 0.6s ease forwards;
+  animation-delay: var(--reveal-delay, 0ms);
+  animation-play-state: paused;
 }
 
-.editor-card {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
-  padding: 24px 28px;
-  background: #ffffff;
-  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
-}
-
-.editor-card h3 {
-  margin: 0 0 16px;
-  font-size: 1.4rem;
-  color: #0f172a;
-}
-
-.editor-card p {
-  color: #475569;
-  line-height: 1.7;
-}
-
-.editor-card ul,
-.editor-card ol {
-  margin: 16px 0;
-  padding-left: 22px;
-  color: #374151;
-  line-height: 1.7;
-}
-
-.editor-card-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #475569;
-  background: rgba(148, 163, 184, 0.2);
-  margin-bottom: 16px;
+.editor-block.revealed .text-reveal {
+  animation-play-state: running;
 }
 
 .editor-flow {
@@ -12049,26 +12033,7 @@ main {
 }
 
 .value-card {
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 16px;
-  padding: 16px;
-  background: rgba(248, 250, 252, 0.9);
-}
-
-.value-card h4 {
-  margin: 0 0 8px;
-  color: #0f172a;
-}
-
-.editor-card--cta {
-  background: linear-gradient(145deg, #111827, #1e293b);
-  color: #f8fafc;
-  border-color: transparent;
-}
-
-.editor-card--cta p,
-.editor-card--cta li {
-  color: rgba(248, 250, 252, 0.9);
+  padding: 12px 0;
 }
 
 .editor-cta-button {
@@ -12150,8 +12115,9 @@ main {
     padding: 4px 8px;
   }
 
-  .editor-insert-button {
-    font-size: 0.9rem;
+  .editor-placeholder {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -12182,9 +12148,33 @@ main {
   }
 }
 
+@keyframes textReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .editor-block,
-  .editor-insert-button,
+  .editor-card--ghost,
   .editor-cta-button,
   .editor-scroll-cue {
     animation: none;
