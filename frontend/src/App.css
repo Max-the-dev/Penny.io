@@ -3413,7 +3413,7 @@ main {
 /* Article Page Styles */
 .article-page {
   width: 100%;
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 20px;
   min-height: calc(100vh - 64px);
@@ -3912,6 +3912,8 @@ main {
   font-size: 1.125rem;
   line-height: 1.7;
   color: #1a1a1a;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .full-content p {
@@ -3957,6 +3959,116 @@ main {
 .full-content code {
   color: #1a1a1a;
   white-space: pre-wrap;
+}
+
+/* TinyMCE Table Styles */
+.full-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 24px 0;
+  background: white;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.full-content table td,
+.full-content table th {
+  border: 1px solid #e1e8ed;
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.full-content table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.full-content table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* TinyMCE Text Alignment */
+.full-content .mce-content-body p[style*="text-align: center"],
+.full-content p[style*="text-align: center"],
+.full-content [style*="text-align: center"] {
+  text-align: center;
+}
+
+.full-content .mce-content-body p[style*="text-align: right"],
+.full-content p[style*="text-align: right"],
+.full-content [style*="text-align: right"] {
+  text-align: right;
+}
+
+.full-content .mce-content-body p[style*="text-align: left"],
+.full-content p[style*="text-align: left"],
+.full-content [style*="text-align: left"] {
+  text-align: left;
+}
+
+.full-content .mce-content-body p[style*="text-align: justify"],
+.full-content p[style*="text-align: justify"],
+.full-content [style*="text-align: justify"] {
+  text-align: justify;
+}
+
+/* TinyMCE Indentation (preserve padding-left from TinyMCE) */
+.full-content p[style*="padding-left"],
+.full-content div[style*="padding-left"] {
+  /* Preserve inline padding-left styles from TinyMCE */
+}
+
+/* TinyMCE Images */
+.full-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+/* Default image margin (left-aligned or unaligned) */
+.full-content img:not([style*="margin-left"]):not([style*="margin-right"]):not([style*="float"]) {
+  margin: 24px 0;
+}
+
+/* Centered images (TinyMCE uses margin: auto) */
+.full-content img[style*="margin-left: auto"],
+.full-content img[style*="margin-right: auto"] {
+  margin-top: 24px;
+  margin-bottom: 24px;
+  /* Let inline styles handle left/right margins for centering */
+}
+
+/* Images inside centered paragraphs/divs (text-align: center) */
+.full-content p[style*="text-align: center"] img,
+.full-content div[style*="text-align: center"] img,
+.full-content [style*="text-align: center"] img {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+/* Floated images (wrap text) */
+.full-content img[style*="float: left"] {
+  float: left;
+  margin: 0 20px 20px 0;
+}
+
+.full-content img[style*="float: right"] {
+  float: right;
+  margin: 0 0 20px 20px;
+}
+
+/* TinyMCE Blockquotes */
+.full-content blockquote {
+  border-left: 4px solid #1d9bf0;
+  padding-left: 20px;
+  margin: 24px 0;
+  font-style: italic;
+  color: #536471;
 }
 
 .article-not-found {

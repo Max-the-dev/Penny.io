@@ -431,14 +431,6 @@ function Article() {
 
   const tipAmountValue = (selectedTipAmount ?? parseFloat(customTipAmount)) || 0;
 
-  // Format text with basic markdown support
-  const formatText = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
-      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
-      .replace(/`(.*?)`/g, '<code>$1</code>'); // Inline code
-  };
-
   return (
     <div className="article-page">
       <div className="container">
@@ -639,43 +631,10 @@ function Article() {
             )}
 
             {(hasPaid || isAuthor) && (
-              <div className="full-content">
-                {article.content.split('\n\n').map((paragraph, index) => {
-                  if (paragraph.startsWith('## ')) {
-                    return <h2 key={index}>{paragraph.replace('## ', '')}</h2>;
-                  }
-                  if (paragraph.startsWith('### ')) {
-                    return <h3 key={index}>{paragraph.replace('### ', '')}</h3>;
-                  }
-                  if (paragraph.startsWith('```')) {
-                    const code = paragraph.replace(/```\w*\n?/, '').replace(/```$/, '');
-                    return <pre key={index}><code>{code}</code></pre>;
-                  }
-                  if (paragraph.startsWith('- ')) {
-                    const items = paragraph.split('\n').filter(item => item.startsWith('- '));
-                    return (
-                      <ul key={index}>
-                        {items.map((item, i) => {
-                          const text = item.replace('- ', '');
-                          return <li key={i} dangerouslySetInnerHTML={{__html: sanitizeHTML(formatText(text))}} />;
-                        })}
-                      </ul>
-                    );
-                  }
-                  if (paragraph.match(/^\d+\./)) {
-                    const items = paragraph.split('\n').filter(item => item.match(/^\d+\./));
-                    return (
-                      <ol key={index}>
-                        {items.map((item, i) => {
-                          const text = item.replace(/^\d+\.\s*/, '');
-                          return <li key={i} dangerouslySetInnerHTML={{__html: sanitizeHTML(formatText(text))}} />;
-                        })}
-                      </ol>
-                    );
-                  }
-                  return <p key={index} dangerouslySetInnerHTML={{__html: sanitizeHTML(formatText(paragraph))}} />;
-                })}
-              </div>
+              <div
+                className="full-content"
+                dangerouslySetInnerHTML={{__html: sanitizeHTML(article.content)}}
+              />
             )}
           </div>
         </article>

@@ -1376,9 +1376,9 @@ function Write() {
                     resize: false,
                     statusbar: false,
                     plugins: [
-                      'image', 'link', 'lists', 'code', 'table', 'media', 'codesample', 'autolink', 'wordcount'
+                      'image', 'link', 'lists', 'code', 'table', 'media', 'codesample', 'autolink', 'wordcount', 'nonbreaking'
                     ],
-                    toolbar: 'undo redo | blocks | bold italic underline | link image media table | code codesample | bullist numlist outdent indent | removeformat',
+                    toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | link image media table | code codesample | bullist numlist outdent indent | removeformat',
                     
                     // Image upload configuration
                     images_upload_url: 'http://localhost:3001/api/upload',
@@ -1419,11 +1419,11 @@ function Write() {
                       }
                     },
                     content_style: `
-                      body { 
-                        font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-                        font-size: 16px; 
-                        line-height: 1.7; 
-                        max-width: none; 
+                      body {
+                        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                        font-size: 16px;
+                        line-height: 1.7;
+                        max-width: none;
                         margin: 0;
                         padding: 20px;
                         color: #1a1a1a;
@@ -1436,12 +1436,28 @@ function Write() {
                       code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
                       pre { background: #f8f9fa; padding: 1em; border-radius: 8px; overflow-x: auto; }
                       blockquote { border-left: 4px solid #e5e7eb; margin: 1.5em 0; padding-left: 1em; color: #6b7280; }
+                      table { border-collapse: collapse; width: 100%; margin: 1em 0; border: 1px solid #e1e8ed; }
+                      table td, table th { border: 1px solid #e1e8ed; padding: 12px 16px; text-align: left; }
+                      table th { background-color: #f8f9fa; font-weight: 600; }
                     `,
                     skin: 'oxide',
                     branding: false,
                     block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Quote=blockquote',
                     paste_as_text: false,
-                    smart_paste: true
+                    smart_paste: true,
+                    setup: (editor: any) => {
+                      // Enable Tab key for indentation
+                      editor.on('keydown', (e: KeyboardEvent) => {
+                        if (e.key === 'Tab') {
+                          e.preventDefault();
+                          if (e.shiftKey) {
+                            editor.execCommand('Outdent');
+                          } else {
+                            editor.execCommand('Indent');
+                          }
+                        }
+                      });
+                    }
                   }}
                 />
               </div>

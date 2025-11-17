@@ -452,9 +452,9 @@ function EditArticle() {
                     resize: false,
                     statusbar: false,
                     plugins: [
-                      'image', 'link', 'lists', 'code', 'table', 'media', 'codesample', 'autolink', 'wordcount'
+                      'image', 'link', 'lists', 'code', 'table', 'media', 'codesample', 'autolink', 'wordcount', 'nonbreaking'
                     ],
-                    toolbar: 'undo redo | blocks | bold italic underline | link image media table | code codesample | bullist numlist outdent indent | removeformat',
+                    toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | link image media table | code codesample | bullist numlist outdent indent | removeformat',
                     
                     // Image upload configuration
                     images_upload_url: 'http://localhost:3001/api/upload',
@@ -496,17 +496,17 @@ function EditArticle() {
                     },
                     
                     content_style: `
-                      body { 
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; 
-                        font-size: 16px; 
-                        line-height: 1.6; 
+                      body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+                        font-size: 16px;
+                        line-height: 1.6;
                         color: #1a1a1a;
                         padding: 20px;
                         max-width: none;
                       }
-                      h1, h2, h3, h4, h5, h6 { 
-                        color: #1a1a1a; 
-                        font-weight: 600; 
+                      h1, h2, h3, h4, h5, h6 {
+                        color: #1a1a1a;
+                        font-weight: 600;
                         margin-top: 2rem;
                         margin-bottom: 1rem;
                       }
@@ -514,63 +514,77 @@ function EditArticle() {
                       h2 { font-size: 1.5rem; }
                       h3 { font-size: 1.25rem; }
                       p { margin: 0 0 1rem 0; }
-                      blockquote { 
-                        border-left: 4px solid #1d9bf0; 
-                        padding-left: 16px; 
-                        margin: 1rem 0; 
-                        font-style: italic; 
+                      blockquote {
+                        border-left: 4px solid #1d9bf0;
+                        padding-left: 16px;
+                        margin: 1rem 0;
+                        font-style: italic;
                         color: #536471;
                       }
-                      code { 
-                        background: #f1f3f4; 
-                        padding: 2px 6px; 
-                        border-radius: 4px; 
+                      code {
+                        background: #f1f3f4;
+                        padding: 2px 6px;
+                        border-radius: 4px;
                         font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
                         font-size: 0.9em;
                       }
-                      pre { 
-                        background: #f8f9fa; 
-                        padding: 16px; 
-                        border-radius: 8px; 
+                      pre {
+                        background: #f8f9fa;
+                        padding: 16px;
+                        border-radius: 8px;
                         overflow-x: auto;
                         border: 1px solid #e1e8ed;
                       }
-                      img { 
-                        max-width: 100%; 
-                        height: auto; 
+                      img {
+                        max-width: 100%;
+                        height: auto;
                         border-radius: 8px;
                         margin: 1rem 0;
                       }
-                      a { 
-                        color: #1d9bf0; 
-                        text-decoration: none; 
+                      a {
+                        color: #1d9bf0;
+                        text-decoration: none;
                       }
-                      a:hover { 
-                        text-decoration: underline; 
+                      a:hover {
+                        text-decoration: underline;
                       }
-                      ul, ol { 
-                        padding-left: 2rem; 
-                        margin: 1rem 0; 
+                      ul, ol {
+                        padding-left: 2rem;
+                        margin: 1rem 0;
                       }
-                      li { 
-                        margin: 0.5rem 0; 
+                      li {
+                        margin: 0.5rem 0;
                       }
-                      table { 
-                        border-collapse: collapse; 
-                        width: 100%; 
-                        margin: 1rem 0; 
+                      table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin: 1rem 0;
+                        border: 1px solid #e1e8ed;
                       }
-                      table td, table th { 
-                        border: 1px solid #e1e8ed; 
-                        padding: 8px 12px; 
+                      table td, table th {
+                        border: 1px solid #e1e8ed;
+                        padding: 12px 16px;
+                        text-align: left;
                       }
-                      table th { 
-                        background: #f8f9fa; 
-                        font-weight: 600; 
+                      table th {
+                        background: #f8f9fa;
+                        font-weight: 600;
                       }
                     `,
                     
                     setup: (editor: any) => {
+                      // Enable Tab key for indentation
+                      editor.on('keydown', (e: KeyboardEvent) => {
+                        if (e.key === 'Tab') {
+                          e.preventDefault();
+                          if (e.shiftKey) {
+                            editor.execCommand('Outdent');
+                          } else {
+                            editor.execCommand('Indent');
+                          }
+                        }
+                      });
+
                       editor.on('change', () => {
                         setContent(editor.getContent());
                       });

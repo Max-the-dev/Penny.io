@@ -213,7 +213,7 @@ const ABSTRACT_CONTENT = (
       
       Creators set a price between $0.01 and $1.00, readers unlock individual articles in a single click, and payouts settle
       in seconds on-chain. This means no subscriptions, no ads, no account setup, and no payment information required. 
-      To start earning on Penny, all you need is a wallet, a cup of coffee, and a keyboard. 
+      <br></br><br></br>To start earning on Penny, all you need is a wallet, a cup of coffee, and a keyboard. 
       
       Under the hood we rely on the x402 protocol—HTTP’s long-reserved “Payment Required” status which has been developed 
       into a full-fledged payment system. Due to the absence of fees, microtransactions become viable for the first time ever. 

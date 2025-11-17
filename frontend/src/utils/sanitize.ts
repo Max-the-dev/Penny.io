@@ -37,7 +37,7 @@ export function sanitizeHTML(dirty: string): string {
     ALLOWED_ATTR: [
       'href', 'target', 'rel',           // Links
       'src', 'alt', 'width', 'height',   // Images
-      'class', 'id',                      // Styling
+      'class', 'id', 'style',             // Styling (style needed for TinyMCE indentation & alignment)
       'colspan', 'rowspan'                // Tables
     ],
 
@@ -53,21 +53,7 @@ export function sanitizeHTML(dirty: string): string {
     RETURN_DOM_FRAGMENT: false,
     FORCE_BODY: false,
     SANITIZE_DOM: true,        // Sanitize DOM clobbering attacks
-    WHOLE_DOCUMENT: false,
-
-    // Hook to add rel="noopener noreferrer" to external links
-    HOOKS: {
-      afterSanitizeAttributes: (node) => {
-        // Add security attributes to links
-        if (node.tagName === 'A') {
-          const href = node.getAttribute('href');
-          if (href && !href.startsWith('/') && !href.startsWith('#')) {
-            node.setAttribute('target', '_blank');
-            node.setAttribute('rel', 'noopener noreferrer');
-          }
-        }
-      }
-    }
+    WHOLE_DOCUMENT: false
   });
 }
 
