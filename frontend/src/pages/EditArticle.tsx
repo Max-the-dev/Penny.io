@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AppKitConnectButton from '../components/AppKitConnectButton';
 import { Save, Eye, ArrowLeft, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Editor } from '@tinymce/tinymce-react';
-import { apiService, Article } from '../services/api';
+import { apiService, Article, API_BASE_URL } from '../services/api';
 import { sanitizeHTML } from '../utils/sanitize';
 
 function EditArticle() {
@@ -540,7 +540,7 @@ function EditArticle() {
               </div>
               <div className="tinymce-wrapper">
                 <Editor
-                  apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
+                  apiKey="7ompssow13ixn3z1ds3slkwik6xp3uytm0sks18m4sqk2m4q"
                   value={content}
                   onEditorChange={(content) => {
                     clearSubmitFeedback();
@@ -557,7 +557,7 @@ function EditArticle() {
                     toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | link image media table | code codesample | bullist numlist outdent indent | removeformat',
                     
                     // Image upload configuration
-                    images_upload_url: 'http://localhost:3001/api/upload',
+                    images_upload_url: `${API_BASE_URL}/upload`,
                     images_upload_credentials: false,
                     automatic_uploads: true,
                     images_upload_handler: async (blobInfo: any) => {
@@ -575,7 +575,7 @@ function EditArticle() {
                       const formData = new FormData();
                       formData.append('file', blobInfo.blob(), blobInfo.filename());
 
-                      const response = await fetch('http://localhost:3001/api/upload', {
+                      const response = await fetch(`${API_BASE_URL}/upload`, {
                         method: 'POST',
                         headers: authHeaders,
                         body: formData,

@@ -25,7 +25,7 @@ import {
   Trash2,
   WalletMinimal,
 } from 'lucide-react';
-import { apiService, Draft, CreateArticleRequest } from '../services/api';
+import { apiService, Draft, CreateArticleRequest, API_BASE_URL } from '../services/api';
 import { Editor } from '@tinymce/tinymce-react';
 import { extractPlainText } from '../utils/htmlUtils';
 
@@ -1463,7 +1463,7 @@ function Write() {
               </div>
                 <div className="tinymce-wrapper">
                 <Editor
-                  apiKey="7ahasmo84ufchymcd8xokq6qz4l1lh2zdf1wnucvaaeuaxci"
+                  apiKey="7ompssow13ixn3z1ds3slkwik6xp3uytm0sks18m4sqk2m4q"
                   value={content}
                   onEditorChange={(content) => {
                     console.log('[write] Editor change detected. suppress?', suppressSubmitClearRef.current);
@@ -1481,7 +1481,7 @@ function Write() {
                     toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | link image media table | code codesample | bullist numlist outdent indent | removeformat',
                     
                     // Image upload configuration
-                    images_upload_url: 'http://localhost:3001/api/upload',
+                    images_upload_url: `${API_BASE_URL}/upload`,
                     images_upload_credentials: false,
                     automatic_uploads: true,
                     
@@ -1499,14 +1499,14 @@ function Write() {
                             const formData = new FormData();
                             formData.append('file', file);
                             
-                            fetch('http://localhost:3001/api/upload', {
+                            fetch(`${API_BASE_URL}/upload`, {
                               method: 'POST',
                               body: formData
                             })
                             .then(response => response.json())
                             .then(result => {
                               if (result.location) {
-                                callback('http://localhost:3001' + result.location, { alt: file.name });
+                                callback(result.location, { alt: file.name });
                               }
                             })
                             .catch(error => {
