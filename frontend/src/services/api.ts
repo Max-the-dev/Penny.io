@@ -225,6 +225,14 @@ class ApiService {
     );
   }
 
+  async canEditArticle(articleId: number, userAddress: string): Promise<ApiResponse<{ canEdit: boolean }>> {
+    return this.request<{ canEdit: boolean }>(
+      `/articles/${articleId}/can-edit/${userAddress}`,
+      undefined,
+      false
+    );
+  }
+
   async recordPurchase(articleId: number): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>(`/articles/${articleId}/purchase`, {
       method: 'POST',

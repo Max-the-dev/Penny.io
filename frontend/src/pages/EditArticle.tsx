@@ -25,6 +25,8 @@ function EditArticle() {
   const [showUpdateConfirm, setShowUpdateConfirm] = useState<boolean>(false);
   const [showValidationSummary, setShowValidationSummary] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(false);
 
   // Content limits (match Write page)
   const MAX_TITLE_LENGTH = 200;
@@ -110,8 +112,9 @@ function EditArticle() {
 
   const loadArticle = async () => {
     if (!id || !isAuthenticated || !address) return;
-    
+
     setLoading(true);
+    setCheckingAuth(true);
     try {
       const response = await apiService.getArticleById(parseInt(id));
       if (response.success && response.data) {
@@ -123,6 +126,9 @@ function EditArticle() {
         setSubmitError('');
         setSubmitSuccess(false);
         setShowValidationSummary(false);
+
+        // Check if user can edit this article (supports secondary wallets)
+        await checkEditPermission(parseInt(id), address);
       } else {
         setSubmitError('Article not found');
       }
@@ -136,11 +142,28 @@ function EditArticle() {
       }
     } finally {
       setLoading(false);
+      setCheckingAuth(false);
     }
   };
 
-  // Check if user is authorized to edit this article
-  const isAuthorized = Boolean(article && address && article.authorAddress === address);
+  const checkEditPermission = async (articleId: number, userAddress: string) => {
+    console.log('[EditArticle] Checking edit permission for article:', articleId);
+    console.log('[EditArticle] User address:', userAddress);
+    try {
+      const response = await apiService.canEditArticle(articleId, userAddress);
+      console.log('[EditArticle] API response:', response);
+      if (response.success && response.data) {
+        console.log('[EditArticle] Can edit:', response.data.canEdit);
+        setIsAuthorized(response.data.canEdit);
+      } else {
+        console.log('[EditArticle] API call failed or no data');
+        setIsAuthorized(false);
+      }
+    } catch (error) {
+      console.error('[EditArticle] Error checking edit permission:', error);
+      setIsAuthorized(false);
+    }
+  };
 
   const handleUpdateArticle = async () => {
     if (!address || !article) return;
@@ -300,12 +323,12 @@ function EditArticle() {
     );
   }
 
-  if (loading) {
+  if (loading || checkingAuth) {
     return (
       <div className="write-page">
         <div className="container">
           <div className="loading-state">
-            <p>Loading article...</p>
+            <p>{checkingAuth ? 'Checking permissions...' : 'Loading article...'}</p>
           </div>
         </div>
       </div>
