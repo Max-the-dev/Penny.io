@@ -1,3 +1,4 @@
+// @ts-ignore - Coinbase CDP SDK has type errors in v0.x
 import { generateJwt } from '@coinbase/cdp-sdk/auth';
 
 type SupportedKind = {
