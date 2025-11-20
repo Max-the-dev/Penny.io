@@ -10,7 +10,7 @@ function Header() {
         <Link to="/" className="logo">
           <h1>Readia.io</h1>
         </Link>
-        <nav className="nav">
+        <nav className="nav-links-center">
           <Link to="/explore" className="link">
             <span className="link-icon"><BookOpen size={20}/></span>
             <span className="link-title">Explore</span>
@@ -23,10 +23,12 @@ function Header() {
             <span className="link-icon"><LayoutDashboard size={20}/></span>
             <span className="link-title">Dashboard</span>
           </Link>
-          <AppKitConnectButton />
         </nav>
+        <div className="auth-container">
+          <AppKitConnectButton />
+          <AuthStatusBadges />
+        </div>
       </div>
-      <AuthStatusBadges />
     </header>
   );
 }

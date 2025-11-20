@@ -726,7 +726,7 @@ function Dashboard() {
     return (
       <div className="connect-state connect-state--full">
         <ConnectPromptHero
-          title="Connect your wallet"
+          title="Connect Your Wallet"
           description="A single screen view for everything that matters—review your metrics, manage your articles, and control your wallets."
           highlights={dashboardHighlights}
         />
@@ -988,11 +988,10 @@ function Dashboard() {
                 
                 <div className="filter-separator"></div>
                 
-                <div className="filter-group" style={{minWidth: 'auto'}}>
+                <div className="filter-actions">
                   <button 
                     className="clear-filters-btn"
                     onClick={clearSearch}
-                    style={{marginTop: 'auto'}}
                   >
                     Clear all
                   </button>

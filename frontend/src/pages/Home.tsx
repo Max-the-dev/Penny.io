@@ -88,7 +88,23 @@ function Home() {
               <span className="hero-powered-brand">Coinbase x402</span>
             </div>
             <h1>Content Monetization Reimagined</h1>
-            <p className="hero-subtitle" style={{fontSize: '15px'}}>
+            <div className="typing-text-box">
+              <span className="typing-text">
+                {displayText}
+                <span className="cursor">|</span>
+              </span>
+            </div>
+            <div className="hero-cta-buttons">
+              <Link to="/write" className="cta-simple-button">
+                <PenTool size={18} />
+                Start Writing
+              </Link>
+              <Link to="/explore" className="cta-simple-button">
+                <BookOpen size={18} />
+                Explore Articles
+              </Link>
+            </div>
+            <p className="hero-subtitle">
               Readers: Pay only for what you read—no subscriptions, no ads.
               <br></br>
               Authors: Receive 100% of revenue directly into your wallet.
@@ -96,23 +112,10 @@ function Home() {
           </div>
         </div>
 
-        <div className="typing-cta-section">
-          <div className="typing-cta-wrapper">
-            <div className="typing-text-box">
-              <span className="typing-text">
-                {displayText}
-                <span className="cursor">|</span>
-              </span>
-            </div>
-            <Link to="/write" className="cta-simple-button">
-              <PenTool size={18} />
-              Start Writing
-            </Link>
-          </div>
-        </div>
+      </div>
 
-        <div className="featured-articles">
-        <h2></h2>
+      {/* Featured Articles - separate white section */}
+      <div className="featured-articles">
         <h2>Recently Published</h2>
         <div className="article-grid">
           {loading ? (
@@ -145,8 +148,10 @@ function Home() {
             </div>
           )}
         </div>
-        
-        {/* Explore All Articles Button */}
+      </div>
+
+      {/* Explore CTA - separate grid background section */}
+      <div className="explore-cta-section">
         <div className="explore-cta">
           <Link to="/explore" className="fancy">
             <span className="top-key"></span>
@@ -157,7 +162,6 @@ function Home() {
             <span className="bottom-key-1"></span>
             <span className="bottom-key-2"></span>
           </Link>
-        </div>
         </div>
       </div>
     </div>

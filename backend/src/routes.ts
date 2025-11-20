@@ -599,8 +599,11 @@ router.post('/articles', writeLimiter, requireAuth, requireOwnership('authorAddr
       return res.status(400).json(response);
     }
 
-    // Spam prevention check
-    const spamCheck = await checkForSpam(authorAddress, title, content);
+    // Resolve secondary wallet to canonical author BEFORE spam checks
+    const { canonicalAddress } = await resolveCanonicalAuthorAddress(authorAddress);
+
+    // Spam prevention check (using canonical address)
+    const spamCheck = await checkForSpam(canonicalAddress, title, content);
     if (spamCheck.isSpam) {
       const response: ApiResponse<never> = {
         success: false,
@@ -611,7 +614,7 @@ router.post('/articles', writeLimiter, requireAuth, requireOwnership('authorAddr
     }
 
     // Ensure author exists BEFORE creating article (required by foreign key constraint)
-    const author = await ensureAuthorRecord(authorAddress);
+    const author = await ensureAuthorRecord(canonicalAddress);
 
     // Generate preview and read time
     const preview = generatePreview(content);
