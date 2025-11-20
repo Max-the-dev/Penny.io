@@ -31,21 +31,21 @@ type ValidationArticleConfig = {
 
 const VALIDATION_ARTICLES: ValidationArticleConfig[] = [
   {
-    title: 'x402 Harness: Base Mainnet Purchase',
+    title: 'Test Article #1',
     content:
       '<p>Use this article to validate Base mainnet purchases via the Coinbase x402 facilitator.</p><p>It is pinned to the platform Base wallet and costs exactly $0.01.</p>',
     authorAddress: PLATFORM_BASE_ADDRESS,
     authorPrimaryNetwork: 'base',
   },
   {
-    title: 'x402 Harness: Base Regression Article',
+    title: 'Test Article #2',
     content:
       '<p>Second Base article for regression testing. Keeping a sibling entry ensures we can purchase twice without violating 1 purchase per wallet per article rule.</p><p>Also priced at $0.01.</p>',
     authorAddress: PLATFORM_BASE_ADDRESS,
     authorPrimaryNetwork: 'base',
   },
   {
-    title: 'x402 Harness: Solana Validation Article',
+    title: 'Test Article #3',
     content:
       '<p>This article is tied to the Solana payout address so the harness can walk through SPL USDC purchases.</p><p>It mirrors the Base price ($0.01) for consistency across networks.</p>',
     authorAddress: PLATFORM_SOL_ADDRESS,

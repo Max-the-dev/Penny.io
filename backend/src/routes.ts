@@ -447,12 +447,14 @@ function estimateReadTime(content: string): string {
   return `${minutes} min read`;
 }
 
- // Utility to hide test articles from /explore
-  const TEST_ARTICLE_BLOCKLIST = new Set([92, 93, 94]);
-  const shouldBypassExploreFilter = (req: Request) => {
-    const referrer = req.get('referer') || '';
-    return referrer.includes('/x402-test');
-  };
+const shouldBypassExploreFilter = (req: Request) => {
+  const referrer = req.get('referer') || '';
+  return referrer.includes('/x402-test');
+};
+
+const isValidationArticle = (article: Article): boolean => {
+  return Array.isArray(article.categories) && article.categories.includes('Validation');
+};
 
 // GET /api/articles - Get all articles or articles by author
 router.get('/articles', readLimiter, validate(getArticlesQuerySchema, 'query'), async (req: Request, res: Response) => {
@@ -482,7 +484,7 @@ router.get('/articles', readLimiter, validate(getArticlesQuerySchema, 'query'), 
 
     const hideTestArticles = !authorAddress && !shouldBypassExploreFilter(req);
     const sanitizedArticles = hideTestArticles
-      ? articles.filter(article => !TEST_ARTICLE_BLOCKLIST.has(article.id))
+      ? articles.filter(article => !isValidationArticle(article))
       : articles;
 
     const response: ApiResponse<Article[]> = {

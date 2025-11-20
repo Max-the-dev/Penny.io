@@ -264,17 +264,17 @@ class Database {
 
     const normalizedAddresses = targetAddresses.map(address => normalizeFlexibleAddress(address));
 
-    let query = supabase
+    const { data, error } = await supabase
       .from('articles')
       .select('*')
       .in('author_address', normalizedAddresses)
-      .contains('categories', ['Validation'])
       .order('created_at', { ascending: false });
 
-    const { data, error } = await query;
     if (error) throw error;
 
-    return (data || []).map(row => this.parseArticleFromRow(row));
+    return (data || [])
+      .map(row => this.parseArticleFromRow(row))
+      .filter(article => Array.isArray(article.categories) && article.categories.includes('Validation'));
   }
 
   async getArticleById(id: number): Promise<Article | null> {
