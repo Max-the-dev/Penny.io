@@ -531,6 +531,28 @@ router.get('/articles/:id', readLimiter, async (req: Request, res: Response) => 
   }
 });
 
+// GET /api/x402/test-articles - Fetch fixed validation articles for harness
+router.get('/x402/test-articles', readLimiter, async (_req: Request, res: Response) => {
+  try {
+    const addresses = [PLATFORM_EVM_ADDRESS, PLATFORM_SOLANA_ADDRESS].filter(Boolean) as string[];
+    const articles = await db.getValidationArticles(addresses);
+
+    const response: ApiResponse<Article[]> = {
+      success: true,
+      data: articles,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching x402 validation articles:', error);
+    const response: ApiResponse<never> = {
+      success: false,
+      error: 'Failed to fetch validation articles',
+    };
+    res.status(500).json(response);
+  }
+});
+
 // POST /api/articles - Create new article
 /**
  * runs the spam/quality checks without writing anything. 
