@@ -26,9 +26,9 @@ const X402Test: React.FC = () => {
   );
 
   const articles = [
-    { id: '185', title: 'Test article 1', price: '$0.01' },
-    { id: '186', title: 'Test article 2', price: '$0.01' },
-    { id: '187', title: 'Test article 3', price: '$0.01' },
+    { id: '188', title: 'Test article 1', price: '$0.01' },
+    { id: '189', title: 'Test article 2', price: '$0.01' },
+    { id: '190', title: 'Test article 3', price: '$0.01' },
   ];
 
   const [currentPaymentReq, setCurrentPaymentReq] = useState<PaymentRequirement | null>(null);
