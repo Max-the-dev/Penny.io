@@ -72,6 +72,28 @@ app.use(cors(corsOptions));
 
 // Helmet security headers - comes AFTER CORS to allow preflight
 app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // TinyMCE needs eval
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"], // Supabase Storage + data URLs
+      connectSrc: [
+        "'self'",
+        "https://okftigzmxfkghibhlnjo.supabase.co", // Your Supabase
+        "https://*.supabase.co", // Supabase services
+        "https://facilitator.cdp.coinbase.com", // CDP facilitator
+        "https://x402.org", // x402 facilitator
+        "https://*.walletconnect.com", // WalletConnect
+        "https://*.walletconnect.org",
+        "wss://*.walletconnect.com", // WebSocket for wallets
+        "wss://*.walletconnect.org"
+      ],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'self'", "https://verify.walletconnect.com"], // WalletConnect modals
+    },
+  },
   crossOriginResourcePolicy: false,
 }));
 app.use(express.json({ limit: jsonBodyLimit }));
