@@ -13698,19 +13698,19 @@ w3m-input:focus {
 }
 
 
-.wallet-connect-button--disconnected::before {
+.wallet-connect-button.wallet-connect-button--disconnected::before {
   content: "";
   position: absolute;
   width: calc(100% + 40px);
   height: 100%;
   left: -20px;
   top: 0;
-  background: #fff;
+  background: var(--contrast-inverse-bg) !important;
   border-radius: 8px;
   transform: translateX(-120%);
-  transition: transform 0.35s ease;
+  transition: transform 0.4s ease;
   pointer-events: none;
-
+  z-index: 0;
 }
 
 
@@ -13720,8 +13720,13 @@ w3m-input:focus {
 }
 
 
-.wallet-connect-button--disconnected:hover {
-  color: #0f0f0f;
+.wallet-connect-button.wallet-connect-button--disconnected:hover {
+  color: var(--contrast-inverse-text);
+  background-color: transparent !important;
+}
+
+.wallet-connect-button.wallet-connect-button--disconnected:hover::before {
+  transform: translateX(0);
 }
 
 
