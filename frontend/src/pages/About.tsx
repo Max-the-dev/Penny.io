@@ -130,7 +130,7 @@ function About() {
                   className='x-link'
                 >
                   <XLogo size={20} />
-                  @Readia.io
+                  Readia.io
                 </a>
               </div>
             
