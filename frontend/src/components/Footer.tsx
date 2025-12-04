@@ -394,7 +394,7 @@ function Footer() {
             <p>Publishing Reimagined</p>
             {/* Action Buttons */}
             <div className="footer-actions">
-              <Link to="/x402-test" className="x402-validation-button">
+              <Link to="/x402-test" className="donate-button">
                 <span className="top-key"></span>
                 <span className="button-text">
                   <Laptop size={18} />
@@ -564,7 +564,7 @@ function Footer() {
 
                 <div className="donation-social-links">
                   <a
-                    href="https://x.com/devvinggold"
+                    href="https://x.com/Readia_io"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="donation-social-link"
@@ -572,7 +572,7 @@ function Footer() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
                     </svg>
-                    @devinggold
+                    Readia.io
                   </a>
                   <a
                     href="https://github.com/Max-the-dev/Readia.io"
