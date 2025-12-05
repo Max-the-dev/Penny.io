@@ -33,22 +33,22 @@
 
 .filter-select {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   font-size: 14px;
-  background: white;
+  background: var(--bg-primary);
   transition: border-color 0.2s ease;
 }
 
 .filter-select:focus {
   outline: none;
   border-color: var(--text-primary);
-  box-shadow: 0 0 0 2px rgba(26, 26, 26, 0.1);
+  box-shadow: 0 0 0 2px var(--shadow-focus);
 }
 
 .explore-cta-section {
   position: relative;
-  background-color: #f8fafc;
+  background-color: var(--bg-secondary);
   width: 100vw;
   margin-left: calc(-50vw + 50%);
   padding: 60px 20px 80px;
@@ -73,8 +73,8 @@
   max-width: 380px;
   min-width: 0;
   margin: 0 auto;
-  background: #f9fafb;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
   border-radius: 16px;
   padding: 20px;
 }

@@ -7,8 +7,8 @@
   right: 40px;
   width: 56px;
   height: 56px;
-  background: #1a1a1a;
-  color: white;
+  background: var(--contrast-bg);
+  color: var(--contrast-text);
   border: none;
   border-radius: 50%;
   cursor: pointer;
