@@ -12510,15 +12510,16 @@ w3m-input:focus {
 
 
 [data-theme="dark"] .like-button-liked {
-  background: rgba(239, 68, 68, 0.25);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: var(--contrast-text);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(239, 68, 68, 0.8);
+  color: #ff6b6b;
 }
 
 
 [data-theme="dark"] .like-button-liked:hover {
-  background: rgba(239, 68, 68, 0.35);
-  border-color: rgba(239, 68, 68, 0.8);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(239, 68, 68, 1);
+  color: #ff7f7f;
 }
 
 
