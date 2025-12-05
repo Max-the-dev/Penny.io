@@ -174,11 +174,9 @@ function Footer() {
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    setIsWalletStateReady(false);
     let readinessTimer: number | undefined;
 
     if (typeof window !== 'undefined') {
-      readinessTimer = window.setTimeout(() => setIsWalletStateReady(true), 250);
       try {
         const stored = window.localStorage.getItem(DONATION_STORAGE_KEY);
         if (stored) {
@@ -196,6 +194,7 @@ function Footer() {
       } catch (error) {
         console.error('Unable to load donation preferences', error);
       }
+      setIsWalletStateReady(true);
     } else {
       setIsWalletStateReady(true);
     }

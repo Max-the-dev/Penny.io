@@ -2401,8 +2401,8 @@ w3m-input:focus {
   padding: 24px 24px;
   border-bottom: 1px solid var(--border-light);
   border-left: 3px solid transparent;
-  margin: 0 8px;
-  border-radius: 18px;
+  margin: 0;
+  border-radius: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   align-items: center;
@@ -5670,6 +5670,47 @@ w3m-input:focus {
 }
 
 
+.drafts-item-actions .table-cell.actions .action-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+
+.drafts-item-actions .table-cell.actions .action-btn svg {
+  width: 20px;
+  height: 20px;
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+
+.drafts-item-actions .table-cell.actions .action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+
+.drafts-item-actions .table-cell.actions .delete-btn {
+  color: #ef4444;
+}
+
+
+.drafts-item-actions .table-cell.actions .delete-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+
 @media (max-width: 640px) {
   .drafts-item {
     flex-direction: column;
@@ -6459,7 +6500,7 @@ w3m-input:focus {
   opacity: 1;
   transform: translateY(-8px) scale(1.2);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 
 
