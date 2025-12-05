@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, FormEvent, useMemo } from 're
 import { useLocation } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import ConnectPromptHero, { writeHighlights } from '../components/ConnectPromptHero';
 import {
   Save,
@@ -32,6 +33,7 @@ import { extractPlainText } from '../utils/htmlUtils';
 function Write() {
   const { isConnected, isConnecting, address } = useWallet();
   const { login, isAuthenticated, isAuthenticating, error: authError, handleAuthError, getAuthHeaders } = useAuth();
+  const { theme } = useTheme();
   const location = useLocation();
 
   // Category emojis for visual enhancement
@@ -106,6 +108,7 @@ function Write() {
   const autoLoadKeyRef = useRef<string | null>(null);
   const handleSubmitRef = useRef<((event: FormEvent<HTMLFormElement>) => void | Promise<void>) | undefined>(undefined);
   const autoSaveControllerRef = useRef<AbortController | null>(null);
+  const editorRef = useRef<any>(null);
 
   const clearAutoSaveTimers = useCallback(() => {
     if (typingTimeoutRef.current !== null) {
@@ -121,6 +124,55 @@ function Write() {
       autoSaveControllerRef.current = null;
     }
   }, []);
+
+  const applyEditorTheme = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const doc = editor.getDoc();
+    if (!doc) return;
+    const root = doc.documentElement;
+    if (!root) return;
+
+    const palette: Record<string, string> = theme === 'dark'
+      ? {
+          'text-color': '#f5f5f5',
+          'heading-color': '#ffffff',
+          'muted-color': '#d1d5db',
+          'code-bg': '#1f2933',
+          'code-text-color': '#f5f5f5',
+          'pre-bg': '#111827',
+          'blockquote-border': '#374151',
+          'blockquote-text': '#cbd5f5',
+          'table-border': '#374151',
+          'table-head-bg': '#1f2933'
+        }
+      : {
+          'text-color': '#1a1a1a',
+          'heading-color': '#1a1a1a',
+          'muted-color': '#6b7280',
+          'code-bg': '#f3f4f6',
+          'code-text-color': '#1a1a1a',
+          'pre-bg': '#f8f9fa',
+          'blockquote-border': '#e5e7eb',
+          'blockquote-text': '#6b7280',
+          'table-border': '#e1e8ed',
+          'table-head-bg': '#f8f9fa'
+        };
+
+    Object.entries(palette).forEach(([token, value]) => {
+      root.style.setProperty(`--editor-${token}`, value);
+    });
+
+    if (doc.body) {
+      doc.body.style.background = 'transparent';
+      doc.body.style.color = palette['text-color'];
+      doc.body.style.caretColor = palette['text-color'];
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    applyEditorTheme();
+  }, [applyEditorTheme]);
 
   const upsertDraftInState = (draft: Draft) => {
     setAvailableDrafts(prev => {
@@ -1464,6 +1516,10 @@ function Write() {
                 <div className="tinymce-wrapper">
                 <Editor
                   apiKey="7ompssow13ixn3z1ds3slkwik6xp3uytm0sks18m4sqk2m4q"
+                  onInit={(_, editor) => {
+                    editorRef.current = editor;
+                    applyEditorTheme();
+                  }}
                   value={content}
                   onEditorChange={(content) => {
                     console.log('[write] Editor change detected. suppress?', suppressSubmitClearRef.current);
@@ -1572,6 +1628,18 @@ function Write() {
                       }
                     },
                     content_style: `
+                      :root {
+                        --editor-text-color: #1a1a1a;
+                        --editor-heading-color: #1a1a1a;
+                        --editor-muted-color: #6b7280;
+                        --editor-code-bg: #f3f4f6;
+                        --editor-code-text-color: #1a1a1a;
+                        --editor-pre-bg: #f8f9fa;
+                        --editor-blockquote-border: #e5e7eb;
+                        --editor-blockquote-text: #6b7280;
+                        --editor-table-border: #e1e8ed;
+                        --editor-table-head-bg: #f8f9fa;
+                      }
                       body {
                         font-family: 'Inter', system-ui, -apple-system, sans-serif;
                         font-size: 16px;
@@ -1579,19 +1647,50 @@ function Write() {
                         max-width: none;
                         margin: 0;
                         padding: 20px;
-                        color: #1a1a1a;
+                        color: var(--editor-text-color);
+                        background: transparent;
                       }
-                      h1, h2, h3 { color: #1a1a1a; margin-top: 2em; margin-bottom: 0.5em; }
+                      h1, h2, h3 { color: var(--editor-heading-color); margin-top: 2em; margin-bottom: 0.5em; }
                       h1 { font-size: 2em; font-weight: 700; }
                       h2 { font-size: 1.5em; font-weight: 600; }
                       h3 { font-size: 1.25em; font-weight: 600; }
                       p { margin-bottom: 1em; }
-                      code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-                      pre { background: #f8f9fa; padding: 1em; border-radius: 8px; overflow-x: auto; }
-                      blockquote { border-left: 4px solid #e5e7eb; margin: 1.5em 0; padding-left: 1em; color: #6b7280; }
-                      table { border-collapse: collapse; width: 100%; margin: 1em 0; border: 1px solid #e1e8ed; }
-                      table td, table th { border: 1px solid #e1e8ed; padding: 12px 16px; text-align: left; }
-                      table th { background-color: #f8f9fa; font-weight: 600; }
+                      code {
+                        background: var(--editor-code-bg);
+                        color: var(--editor-code-text-color);
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        font-size: 0.9em;
+                      }
+                      pre {
+                        background: var(--editor-pre-bg);
+                        color: var(--editor-code-text-color);
+                        padding: 1em;
+                        border-radius: 8px;
+                        overflow-x: auto;
+                      }
+                      blockquote {
+                        border-left: 4px solid var(--editor-blockquote-border);
+                        margin: 1.5em 0;
+                        padding-left: 1em;
+                        color: var(--editor-blockquote-text);
+                      }
+                      table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin: 1em 0;
+                        border: 1px solid var(--editor-table-border);
+                      }
+                      table td, table th {
+                        border: 1px solid var(--editor-table-border);
+                        padding: 12px 16px;
+                        text-align: left;
+                      }
+                      table th {
+                        background-color: var(--editor-table-head-bg);
+                        font-weight: 600;
+                        color: var(--editor-heading-color);
+                      }
                     `,
                     skin: 'oxide',
                     branding: false,
