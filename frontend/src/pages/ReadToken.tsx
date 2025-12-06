@@ -5,13 +5,11 @@ import XLogo from '../components/XLogo';
 function ReadToken() {
   const benefits = [
     "Platform Governance",
-    "Community Voting Rights",
     "Revenue Sharing",
-    "Staking Rewards",
-    "Protocol Upgrades",
-    "Treasury Control",
-    "Feature Proposals",
-    "Decentralized Decisions"
+    "Early Access",
+    "Exclusive Rewards",
+    "Platform Economy",
+    "Pay-with-$READ",
   ];
 
   const [currentBenefit, setCurrentBenefit] = useState(0);
@@ -56,7 +54,7 @@ function ReadToken() {
               <span className="hero-powered-label">Governance Token</span>
               <span className="hero-powered-brand">$READ</span>
             </div>
-            <h1>Readia Platform Governance</h1>
+            <h1>Readia Native Token</h1>
             <div className="typing-text-box">
               <span className="typing-text">
                 {displayText}

@@ -11,8 +11,9 @@
 }
 
 .read-token-content {
-  padding: 80px 0;
-  max-width: 800px;
+  padding: 80px 16px;
+  max-width: 1180px;
+  width: min(1180px, 97vw);
   margin: 0 auto;
 }
 
